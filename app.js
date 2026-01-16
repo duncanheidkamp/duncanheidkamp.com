@@ -13,6 +13,9 @@ const CONFIG = {
     // Refresh interval in milliseconds
     REFRESH_INTERVAL: 60000,
 
+    // Finnhub API key (free at finnhub.io)
+    FINNHUB_API_KEY: 'd5l7fp9r01qgqufkp040d5l7fp9r01qgqufkp04g',
+
     // Instapaper credentials (for auto-save)
     // Leave INSTAPAPER_USERNAME empty to disable
     INSTAPAPER_USERNAME: 'duncan.heidkamp@gmail.com',
@@ -63,11 +66,16 @@ const CONFIG = {
     // Stock symbols to track
     STOCKS: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'DIS', 'T'],
 
-    // Index symbols
+    // Index ETF proxies (Finnhub doesn't support index symbols directly)
     INDICES: {
-        sp500: '^GSPC',
-        nasdaq: '^IXIC',
-        dow: '^DJI'
+        sp500: { symbol: 'SPY', label: 'S&P' },      // SPY tracks S&P 500
+        nasdaq: { symbol: 'QQQ', label: 'NASDAQ' },  // QQQ tracks NASDAQ-100
+        dow: { symbol: 'DIA', label: 'DOW' }         // DIA tracks Dow Jones
+    },
+
+    // Crypto symbols for Finnhub (exchange:pair format)
+    CRYPTO: {
+        btc: { symbol: 'BINANCE:BTCUSDT', label: 'BTC' }
     },
 
     // Sports teams (ESPN team IDs)
@@ -432,11 +440,11 @@ function updateExcelClock() {
 
 function updateExcelStocks(quoteMap) {
     // Update S&P in ribbon
-    const sp500 = quoteMap['^GSPC'];
+    const sp500 = quoteMap['sp500'];
     if (sp500) {
         const el = document.getElementById('excel-sp500');
         if (el) {
-            const change = getQuoteChange(sp500);
+            const change = sp500.changePercent || 0;
             const isPositive = change >= 0;
             el.className = `ribbon-btn ${isPositive ? 'stock-positive' : 'stock-negative'}`;
             el.innerHTML = `
@@ -447,11 +455,11 @@ function updateExcelStocks(quoteMap) {
     }
 
     // Update DOW in ribbon
-    const dow = quoteMap['^DJI'];
+    const dow = quoteMap['dow'];
     if (dow) {
         const el = document.getElementById('excel-dow');
         if (el) {
-            const change = getQuoteChange(dow);
+            const change = dow.changePercent || 0;
             const isPositive = change >= 0;
             el.className = `ribbon-btn ${isPositive ? 'stock-positive' : 'stock-negative'}`;
             el.innerHTML = `
@@ -462,11 +470,11 @@ function updateExcelStocks(quoteMap) {
     }
 
     // Update BTC in ribbon
-    const btc = quoteMap['BTC-USD'];
+    const btc = quoteMap['btc'];
     if (btc) {
         const el = document.getElementById('excel-btc');
         if (el) {
-            const change = getQuoteChange(btc);
+            const change = btc.changePercent || 0;
             const isPositive = change >= 0;
             el.className = `ribbon-btn ${isPositive ? 'stock-positive' : 'stock-negative'}`;
             el.innerHTML = `
@@ -507,56 +515,124 @@ function updateExcelTime() {
 }
 
 // ============================================
-// STOCK DATA
+// STOCK DATA (Finnhub API)
 // ============================================
 
 async function fetchStockData() {
+    if (!CONFIG.FINNHUB_API_KEY) {
+        console.warn('Finnhub API key not configured - stocks will not load');
+        showStockError('Add Finnhub API key to CONFIG');
+        return;
+    }
+
     try {
-        // Using Yahoo Finance via a free API proxy
-        const symbols = [...Object.values(CONFIG.INDICES), ...CONFIG.STOCKS, 'BTC-USD', 'CL=F'];
-        const symbolStr = symbols.join(',');
+        // Build list of all symbols to fetch
+        const symbolsToFetch = [
+            ...Object.entries(CONFIG.INDICES).map(([key, val]) => ({ key, symbol: val.symbol, type: 'index' })),
+            ...CONFIG.STOCKS.map(symbol => ({ key: symbol, symbol, type: 'stock' })),
+            { key: 'btc', symbol: CONFIG.CRYPTO.btc.symbol, type: 'crypto' }
+        ];
 
-        // Try Yahoo Finance query
-        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolStr}`;
+        // Fetch all quotes in parallel
+        const results = await Promise.all(
+            symbolsToFetch.map(item => fetchFinnhubQuote(item.symbol, item.key, item.type))
+        );
 
-        try {
-            const data = await fetchWithProxy(url);
-            const json = JSON.parse(data);
-
-            if (json.quoteResponse && json.quoteResponse.result) {
-                processStockData(json.quoteResponse.result);
-                State.cache.stocks = { data: json.quoteResponse.result, timestamp: Date.now() };
-                saveCache();
-                return;
+        // Build quote map from results
+        const quoteMap = {};
+        results.forEach(result => {
+            if (result && result.key) {
+                quoteMap[result.key] = result;
             }
-        } catch (e) {
-            console.warn('Yahoo Finance failed:', e);
-        }
+        });
+
+        // Process and display
+        processStockData(quoteMap);
+
+        // Cache results
+        State.cache.stocks = { data: quoteMap, timestamp: Date.now() };
+        saveCache();
+
+    } catch (e) {
+        console.error('Stock data fetch failed:', e);
+        updateFeedStatus(undefined, undefined, true);
 
         // Fallback to cached data
         if (State.cache.stocks) {
             processStockData(State.cache.stocks.data);
         }
-    } catch (e) {
-        console.error('Stock data fetch failed:', e);
-        updateFeedStatus(undefined, undefined, true);
     }
 }
 
-function processStockData(quotes) {
-    const quoteMap = {};
-    quotes.forEach(q => {
-        quoteMap[q.symbol] = q;
+/**
+ * Fetch a single quote from Finnhub
+ */
+async function fetchFinnhubQuote(symbol, key, type) {
+    try {
+        const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${CONFIG.FINNHUB_API_KEY}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Finnhub returns: c=current, d=change, dp=percent change, pc=previous close
+        if (data && data.c) {
+            return {
+                key: key,
+                symbol: symbol,
+                type: type,
+                price: data.c,
+                change: data.d,
+                changePercent: data.dp,
+                previousClose: data.pc
+            };
+        }
+        return null;
+    } catch (e) {
+        console.warn(`Finnhub quote failed for ${symbol}:`, e.message);
+        return null;
+    }
+}
+
+function showStockError(message) {
+    // Update index displays with error
+    ['sp500', 'nasdaq', 'dow', 'btc'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const valueEl = el.querySelector('.ticker-value');
+            const changeEl = el.querySelector('.ticker-change');
+            if (valueEl) valueEl.textContent = '---';
+            if (changeEl) {
+                changeEl.textContent = 'API Key Required';
+                changeEl.className = 'ticker-change neutral';
+            }
+        }
     });
 
-    // Update indices
-    updateTickerItem('sp500', quoteMap['^GSPC']);
-    updateTickerItem('nasdaq', quoteMap['^IXIC']);
-    updateTickerItem('dow', quoteMap['^DJI']);
+    const stocksContainer = document.getElementById('stocks-ticker');
+    if (stocksContainer) {
+        stocksContainer.innerHTML = `<span class="ticker-error">${message}</span>`;
+    }
+}
 
-    // Update BTC and Oil
-    updateTickerItem('btc', quoteMap['BTC-USD']);
-    updateTickerItem('oil', quoteMap['CL=F']);
+function processStockData(quoteMap) {
+    // Update indices (using ETF proxies)
+    updateTickerItem('sp500', quoteMap['sp500'], CONFIG.INDICES.sp500.label);
+    updateTickerItem('nasdaq', quoteMap['nasdaq'], CONFIG.INDICES.nasdaq.label);
+    updateTickerItem('dow', quoteMap['dow'], CONFIG.INDICES.dow.label);
+
+    // Update BTC
+    updateTickerItem('btc', quoteMap['btc'], 'BTC');
+
+    // Oil - skip for now (Finnhub doesn't have commodities on free tier)
+    const oilEl = document.getElementById('oil');
+    if (oilEl) {
+        oilEl.querySelector('.ticker-value').textContent = '---';
+        oilEl.querySelector('.ticker-change').textContent = 'N/A';
+    }
 
     // Update individual stocks
     const stocksContainer = document.getElementById('stocks-ticker');
@@ -565,14 +641,12 @@ function processStockData(quotes) {
     CONFIG.STOCKS.forEach(symbol => {
         const quote = quoteMap[symbol];
         if (quote) {
-            const price = getQuotePrice(quote);
-            const change = getQuoteChange(quote);
             const item = document.createElement('span');
             item.className = 'ticker-item';
             item.innerHTML = `
                 <span class="ticker-label">${symbol}</span>
-                <span class="ticker-value">${formatPrice(price)}</span>
-                <span class="ticker-change ${getChangeClass(change)}">${formatPercent(change)}</span>
+                <span class="ticker-value">${formatPrice(quote.price)}</span>
+                <span class="ticker-change ${getChangeClass(quote.changePercent)}">${formatPercent(quote.changePercent)}</span>
             `;
             stocksContainer.appendChild(item);
         }
@@ -582,46 +656,18 @@ function processStockData(quotes) {
     updateExcelStocks(quoteMap);
 }
 
-function updateTickerItem(id, quote) {
+function updateTickerItem(id, quote, label) {
     const el = document.getElementById(id);
     if (!el || !quote) return;
 
     const valueEl = el.querySelector('.ticker-value');
     const changeEl = el.querySelector('.ticker-change');
 
-    // Get price with fallbacks for off-hours
-    const price = getQuotePrice(quote);
-    const change = getQuoteChange(quote);
-
-    if (valueEl) valueEl.textContent = formatPrice(price);
+    if (valueEl) valueEl.textContent = formatPrice(quote.price);
     if (changeEl) {
-        changeEl.textContent = formatPercent(change);
-        changeEl.className = `ticker-change ${getChangeClass(change)}`;
+        changeEl.textContent = formatPercent(quote.changePercent);
+        changeEl.className = `ticker-change ${getChangeClass(quote.changePercent)}`;
     }
-}
-
-/**
- * Get the best available price from a quote
- * Falls back through: regularMarket -> postMarket -> preMarket -> previousClose
- */
-function getQuotePrice(quote) {
-    if (quote.regularMarketPrice) return quote.regularMarketPrice;
-    if (quote.postMarketPrice) return quote.postMarketPrice;
-    if (quote.preMarketPrice) return quote.preMarketPrice;
-    if (quote.regularMarketPreviousClose) return quote.regularMarketPreviousClose;
-    return null;
-}
-
-/**
- * Get the best available change percentage from a quote
- */
-function getQuoteChange(quote) {
-    if (quote.regularMarketChangePercent !== undefined && quote.regularMarketChangePercent !== null) {
-        return quote.regularMarketChangePercent;
-    }
-    if (quote.postMarketChangePercent !== undefined) return quote.postMarketChangePercent;
-    if (quote.preMarketChangePercent !== undefined) return quote.preMarketChangePercent;
-    return 0;
 }
 
 function formatPrice(price) {
@@ -685,7 +731,9 @@ async function fetchInstapaperFeed() {
 
 async function fetchGoodreadsFeed() {
     try {
-        const xml = await fetchWithProxy(CONFIG.RSS_FEEDS.reading.goodreads);
+        // Goodreads needs full XML to get cover images and all books
+        // Skip rss2json (which strips fields) and use CORS proxies directly
+        const xml = await fetchGoodreadsDirectly(CONFIG.RSS_FEEDS.reading.goodreads);
         const items = parseGoodreadsRSS(xml);
 
         // Cache
@@ -706,6 +754,25 @@ async function fetchGoodreadsFeed() {
 }
 
 /**
+ * Fetch Goodreads RSS directly via CORS proxy (bypassing rss2json which strips fields)
+ */
+async function fetchGoodreadsDirectly(url) {
+    const proxies = CONFIG.CORS_PROXIES;
+    for (let i = 0; i < proxies.length; i++) {
+        try {
+            const proxyUrl = proxies[i] + encodeURIComponent(url);
+            const response = await fetch(proxyUrl);
+            if (response.ok) {
+                return await response.text();
+            }
+        } catch (e) {
+            console.warn(`Goodreads proxy ${i} failed:`, e.message);
+        }
+    }
+    throw new Error('All proxies failed for Goodreads');
+}
+
+/**
  * Parse Goodreads RSS which has different structure
  */
 function parseGoodreadsRSS(xml) {
@@ -720,10 +787,18 @@ function parseGoodreadsRSS(xml) {
         const link = entry.querySelector('link')?.textContent?.trim() || '';
         const author = entry.querySelector('author_name')?.textContent?.trim() || '';
 
-        // Try to extract book cover from description
-        const description = entry.querySelector('description')?.textContent || '';
-        const coverMatch = description.match(/src="([^"]+)"/);
-        const coverUrl = coverMatch ? coverMatch[1] : null;
+        // Get book cover from dedicated fields (prefer larger images)
+        let coverUrl = entry.querySelector('book_large_image_url')?.textContent?.trim() ||
+                       entry.querySelector('book_medium_image_url')?.textContent?.trim() ||
+                       entry.querySelector('book_image_url')?.textContent?.trim() ||
+                       entry.querySelector('book_small_image_url')?.textContent?.trim();
+
+        // Fallback: try to extract from description HTML if direct fields are empty
+        if (!coverUrl) {
+            const description = entry.querySelector('description')?.textContent || '';
+            const coverMatch = description.match(/src="([^"]+)"/);
+            coverUrl = coverMatch ? coverMatch[1] : null;
+        }
 
         if (title) {
             items.push({
@@ -999,6 +1074,85 @@ function renderBreakingTicker(items) {
 }
 
 // ============================================
+// FLAG STATUS (Half-Staff Check)
+// ============================================
+
+async function fetchFlagStatus() {
+    const statusEl = document.getElementById('flag-status')?.querySelector('.status-value');
+    if (!statusEl) return;
+
+    try {
+        // Fetch from halfstaff.org RSS feed for Illinois
+        const rssUrl = 'https://halfstaff.org/rss/illinois';
+        const xml = await fetchWithProxy(rssUrl);
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xml, 'text/xml');
+        const items = doc.querySelectorAll('item');
+
+        if (items.length > 0) {
+            const latestItem = items[0];
+            const title = latestItem.querySelector('title')?.textContent || '';
+            const pubDate = latestItem.querySelector('pubDate')?.textContent || '';
+
+            // Check if the half-staff order is currently active
+            const orderDate = new Date(pubDate);
+            const now = new Date();
+            const daysDiff = (now - orderDate) / (1000 * 60 * 60 * 24);
+
+            // Half-staff orders typically last a few days to a couple weeks
+            // Check if order is recent (within 30 days) - we'll show it as potentially active
+            if (daysDiff <= 30) {
+                // Extract reason from title (usually format: "Half-Staff for [Reason]")
+                let reason = title.replace(/half-?staff\s*(for|:)?\s*/i, '').trim();
+                if (reason.length > 30) {
+                    reason = reason.substring(0, 27) + '...';
+                }
+
+                statusEl.textContent = `HALF-STAFF`;
+                statusEl.className = 'status-value alert';
+                statusEl.title = title; // Full reason on hover
+
+                // Cache the result
+                State.cache.flagStatus = {
+                    halfStaff: true,
+                    reason: title,
+                    timestamp: Date.now()
+                };
+                saveCache();
+                return;
+            }
+        }
+
+        // No active half-staff order
+        statusEl.textContent = 'FULL-STAFF';
+        statusEl.className = 'status-value ok';
+        statusEl.title = 'Flag is at full-staff';
+
+        State.cache.flagStatus = { halfStaff: false, timestamp: Date.now() };
+        saveCache();
+
+    } catch (e) {
+        console.warn('Flag status fetch failed:', e);
+
+        // Try fallback: check cache
+        if (State.cache.flagStatus) {
+            if (State.cache.flagStatus.halfStaff) {
+                statusEl.textContent = 'HALF-STAFF';
+                statusEl.className = 'status-value alert';
+                statusEl.title = State.cache.flagStatus.reason || 'Half-staff order in effect';
+            } else {
+                statusEl.textContent = 'FULL-STAFF';
+                statusEl.className = 'status-value ok';
+            }
+        } else {
+            statusEl.textContent = 'UNKNOWN';
+            statusEl.className = 'status-value';
+        }
+    }
+}
+
+// ============================================
 // WEATHER ALERTS
 // ============================================
 
@@ -1190,7 +1344,7 @@ async function updateAll() {
 
     State.feedsLoaded = 0;
     State.feedsTotal = CONFIG.RSS_FEEDS.headlines.length +
-                       CONFIG.RSS_FEEDS.substacks.length + 5; // +2 for reading (instapaper/goodreads), +3 for breaking, stocks, weather
+                       CONFIG.RSS_FEEDS.substacks.length + 6; // +2 reading, +1 breaking, +1 stocks, +1 flag, +1 weather
     State.errors = 0;
 
     updateFeedStatus(0, State.feedsTotal);
@@ -1202,6 +1356,7 @@ async function updateAll() {
         fetchHeadlinesFeed(),
         fetchSubstacksFeed(),
         fetchBreakingNews(),
+        fetchFlagStatus(),
         fetchWeatherAlerts(),
         fetchCongressStatus(),
         fetchSportsData()
