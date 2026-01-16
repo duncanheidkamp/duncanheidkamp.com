@@ -63,9 +63,6 @@ const CONFIG = {
         ]
     },
 
-    // Stock symbols to track
-    STOCKS: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'DIS', 'T'],
-
     // Index ETF proxies (Finnhub doesn't support index symbols directly)
     INDICES: {
         sp500: { symbol: 'SPY', label: 'S&P' },      // SPY tracks S&P 500
@@ -73,9 +70,21 @@ const CONFIG = {
         dow: { symbol: 'DIA', label: 'DOW' }         // DIA tracks Dow Jones
     },
 
-    // Crypto symbols for Finnhub (exchange:pair format)
+    // Crypto symbols for Finnhub
     CRYPTO: {
         btc: { symbol: 'BINANCE:BTCUSDT', label: 'BTC' }
+    },
+
+    // Commodities - WTI Oil ETF proxy
+    COMMODITIES: {
+        wti: { symbol: 'USO', label: 'WTI' }  // USO tracks WTI crude oil
+    },
+
+    // FRED API for Treasury rates and SOFR (free at fred.stlouisfed.org)
+    FRED_API_KEY: '',  // Get free key at https://fred.stlouisfed.org/docs/api/api_key.html
+    FRED_SERIES: {
+        treasury10y: { id: 'DGS10', label: '10Y' },   // 10-Year Treasury Rate
+        sofr: { id: 'SOFR', label: 'SOFR' }           // Secured Overnight Financing Rate
     },
 
     // Sports teams (ESPN team IDs)
@@ -520,17 +529,18 @@ function updateExcelTime() {
 
 async function fetchStockData() {
     if (!CONFIG.FINNHUB_API_KEY) {
-        console.warn('Finnhub API key not configured - stocks will not load');
+        console.warn('Finnhub API key not configured - markets will not load');
         showStockError('Add Finnhub API key to CONFIG');
         return;
     }
 
     try {
-        // Build list of all symbols to fetch
+        // Build list of symbols to fetch from Finnhub
+        // Indices (ETF proxies), BTC, and WTI (USO ETF)
         const symbolsToFetch = [
             ...Object.entries(CONFIG.INDICES).map(([key, val]) => ({ key, symbol: val.symbol, type: 'index' })),
-            ...CONFIG.STOCKS.map(symbol => ({ key: symbol, symbol, type: 'stock' })),
-            { key: 'btc', symbol: CONFIG.CRYPTO.btc.symbol, type: 'crypto' }
+            { key: 'btc', symbol: CONFIG.CRYPTO.btc.symbol, type: 'crypto' },
+            { key: 'wti', symbol: CONFIG.COMMODITIES.wti.symbol, type: 'commodity' }
         ];
 
         // Fetch all quotes in parallel
@@ -598,24 +608,19 @@ async function fetchFinnhubQuote(symbol, key, type) {
 }
 
 function showStockError(message) {
-    // Update index displays with error
-    ['sp500', 'nasdaq', 'dow', 'btc'].forEach(id => {
+    // Update all market displays with error
+    ['sp500', 'nasdaq', 'dow', 'btc', 'wti'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             const valueEl = el.querySelector('.ticker-value');
             const changeEl = el.querySelector('.ticker-change');
             if (valueEl) valueEl.textContent = '---';
             if (changeEl) {
-                changeEl.textContent = 'API Key Required';
+                changeEl.textContent = message;
                 changeEl.className = 'ticker-change neutral';
             }
         }
     });
-
-    const stocksContainer = document.getElementById('stocks-ticker');
-    if (stocksContainer) {
-        stocksContainer.innerHTML = `<span class="ticker-error">${message}</span>`;
-    }
 }
 
 function processStockData(quoteMap) {
@@ -627,33 +632,159 @@ function processStockData(quoteMap) {
     // Update BTC
     updateTickerItem('btc', quoteMap['btc'], 'BTC');
 
-    // Oil - skip for now (Finnhub doesn't have commodities on free tier)
-    const oilEl = document.getElementById('oil');
-    if (oilEl) {
-        oilEl.querySelector('.ticker-value').textContent = '---';
-        oilEl.querySelector('.ticker-change').textContent = 'N/A';
-    }
-
-    // Update individual stocks
-    const stocksContainer = document.getElementById('stocks-ticker');
-    stocksContainer.innerHTML = '';
-
-    CONFIG.STOCKS.forEach(symbol => {
-        const quote = quoteMap[symbol];
-        if (quote) {
-            const item = document.createElement('span');
-            item.className = 'ticker-item';
-            item.innerHTML = `
-                <span class="ticker-label">${symbol}</span>
-                <span class="ticker-value">${formatPrice(quote.price)}</span>
-                <span class="ticker-change ${getChangeClass(quote.changePercent)}">${formatPercent(quote.changePercent)}</span>
-            `;
-            stocksContainer.appendChild(item);
-        }
-    });
+    // Update WTI (using USO ETF as proxy)
+    updateTickerItem('wti', quoteMap['wti'], 'WTI');
 
     // Update Excel ribbon stocks
     updateExcelStocks(quoteMap);
+}
+
+// ============================================
+// TREASURY & SOFR RATES (FRED API)
+// ============================================
+
+async function fetchFredRates() {
+    // FRED API is free but requires an API key
+    // For now, try fetching without key (limited) or show placeholder
+    if (!CONFIG.FRED_API_KEY) {
+        // Try alternative: fetch from Treasury.gov or show as unavailable
+        await fetchTreasuryDirect();
+        return;
+    }
+
+    try {
+        const results = await Promise.all([
+            fetchFredSeries('DGS10', 'treasury10y'),  // 10-Year Treasury
+            fetchFredSeries('SOFR', 'sofr')           // SOFR rate
+        ]);
+
+        results.forEach(result => {
+            if (result) {
+                updateRateItem(result.key, result.value, result.change);
+            }
+        });
+
+        State.cache.rates = { data: results, timestamp: Date.now() };
+        saveCache();
+
+    } catch (e) {
+        console.warn('FRED rates fetch failed:', e);
+        if (State.cache.rates) {
+            State.cache.rates.data.forEach(result => {
+                if (result) updateRateItem(result.key, result.value, result.change);
+            });
+        }
+    }
+}
+
+async function fetchFredSeries(seriesId, key) {
+    try {
+        const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${CONFIG.FRED_API_KEY}&file_type=json&limit=2&sort_order=desc`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.observations && data.observations.length >= 1) {
+            const latest = parseFloat(data.observations[0].value);
+            const previous = data.observations.length > 1 ? parseFloat(data.observations[1].value) : latest;
+            const change = latest - previous;
+
+            return { key, value: latest, change };
+        }
+    } catch (e) {
+        console.warn(`FRED series ${seriesId} failed:`, e);
+    }
+    return null;
+}
+
+/**
+ * Fallback: Fetch Treasury rates from Treasury.gov XML feed
+ */
+async function fetchTreasuryDirect() {
+    try {
+        // Treasury.gov provides daily rates via XML
+        const url = 'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2025/all?type=daily_treasury_yield_curve&field_tdr_date_value=2025&page&_format=csv';
+        const data = await fetchWithProxy(url);
+
+        // Parse CSV - find 10-year rate
+        const lines = data.trim().split('\n');
+        if (lines.length >= 2) {
+            const headers = lines[0].split(',');
+            const latestRow = lines[lines.length - 1].split(',');
+            const prevRow = lines.length >= 3 ? lines[lines.length - 2].split(',') : latestRow;
+
+            // Find 10 Yr column index
+            const tenYrIndex = headers.findIndex(h => h.includes('10 Yr'));
+            if (tenYrIndex !== -1) {
+                const latest = parseFloat(latestRow[tenYrIndex]);
+                const previous = parseFloat(prevRow[tenYrIndex]);
+
+                if (!isNaN(latest)) {
+                    updateRateItem('treasury10y', latest, latest - previous);
+
+                    State.cache.treasury = { value: latest, change: latest - previous, timestamp: Date.now() };
+                    saveCache();
+                }
+            }
+        }
+
+        // SOFR - try NY Fed
+        await fetchSofrFromNYFed();
+
+    } catch (e) {
+        console.warn('Treasury direct fetch failed:', e);
+        // Show as unavailable
+        updateRateItem('treasury10y', null, null);
+        updateRateItem('sofr', null, null);
+    }
+}
+
+async function fetchSofrFromNYFed() {
+    try {
+        // NY Fed SOFR API
+        const url = 'https://markets.newyorkfed.org/api/rates/secured/sofr/last/2.json';
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.refRates && data.refRates.length >= 1) {
+            const latest = data.refRates[0].percentRate;
+            const previous = data.refRates.length > 1 ? data.refRates[1].percentRate : latest;
+
+            updateRateItem('sofr', latest, latest - previous);
+
+            State.cache.sofr = { value: latest, change: latest - previous, timestamp: Date.now() };
+            saveCache();
+        }
+    } catch (e) {
+        console.warn('NY Fed SOFR fetch failed:', e);
+        updateRateItem('sofr', null, null);
+    }
+}
+
+function updateRateItem(id, value, change) {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const valueEl = el.querySelector('.ticker-value');
+    const changeEl = el.querySelector('.ticker-change');
+
+    if (value === null || isNaN(value)) {
+        if (valueEl) valueEl.textContent = '---';
+        if (changeEl) {
+            changeEl.textContent = 'N/A';
+            changeEl.className = 'ticker-change neutral';
+        }
+        return;
+    }
+
+    // Rates are displayed as percentages (e.g., 4.25%)
+    if (valueEl) valueEl.textContent = value.toFixed(2) + '%';
+    if (changeEl) {
+        const changeVal = change || 0;
+        const sign = changeVal >= 0 ? '+' : '';
+        changeEl.textContent = `${sign}${changeVal.toFixed(2)}`;
+        changeEl.className = `ticker-change ${changeVal > 0 ? 'negative' : changeVal < 0 ? 'positive' : 'neutral'}`;
+        // Note: For rates, UP is usually considered negative for markets (higher borrowing costs)
+    }
 }
 
 function updateTickerItem(id, quote, label) {
@@ -1344,7 +1475,7 @@ async function updateAll() {
 
     State.feedsLoaded = 0;
     State.feedsTotal = CONFIG.RSS_FEEDS.headlines.length +
-                       CONFIG.RSS_FEEDS.substacks.length + 6; // +2 reading, +1 breaking, +1 stocks, +1 flag, +1 weather
+                       CONFIG.RSS_FEEDS.substacks.length + 7; // +2 reading, +1 breaking, +1 stocks, +1 rates, +1 flag, +1 weather
     State.errors = 0;
 
     updateFeedStatus(0, State.feedsTotal);
@@ -1352,6 +1483,7 @@ async function updateAll() {
     // Parallel fetch
     await Promise.allSettled([
         fetchStockData(),
+        fetchFredRates(),
         fetchReadingPanel(),
         fetchHeadlinesFeed(),
         fetchSubstacksFeed(),
