@@ -366,23 +366,140 @@ function updateClock() {
 }
 
 // ============================================
-// THEME TOGGLE
+// THEME TOGGLE (3 themes: dark, light, excel)
 // ============================================
 
+const THEMES = ['dark', 'light', 'excel'];
+const THEME_ICONS = { dark: '☀', light: '◐', excel: '▦' };
+const THEME_LABELS = { dark: 'Dark', light: 'Light', excel: 'Excel' };
+
 function initTheme() {
+    // Ensure theme is valid
+    if (!THEMES.includes(State.theme)) {
+        State.theme = 'dark';
+    }
     document.documentElement.setAttribute('data-theme', State.theme);
     updateThemeButton();
+    initExcelUI();
 }
 
 function toggleTheme() {
-    State.theme = State.theme === 'dark' ? 'light' : 'dark';
+    const currentIndex = THEMES.indexOf(State.theme);
+    const nextIndex = (currentIndex + 1) % THEMES.length;
+    State.theme = THEMES[nextIndex];
     document.documentElement.setAttribute('data-theme', State.theme);
     localStorage.setItem('dashboard-theme', State.theme);
     updateThemeButton();
 }
 
 function updateThemeButton() {
-    document.getElementById('theme-toggle').textContent = State.theme === 'dark' ? '☀' : '◐';
+    const btn = document.getElementById('theme-toggle');
+    btn.textContent = THEME_ICONS[State.theme] || '◐';
+    btn.title = `Current: ${THEME_LABELS[State.theme]} (click to change)`;
+}
+
+// ============================================
+// EXCEL UI FUNCTIONS
+// ============================================
+
+function initExcelUI() {
+    // Update Excel clock
+    updateExcelClock();
+    setInterval(updateExcelClock, 1000);
+
+    // Set up hover events to update formula bar
+    document.addEventListener('mouseover', (e) => {
+        const feedItem = e.target.closest('.feed-item, .substack-item');
+        if (feedItem && State.theme === 'excel') {
+            const headline = feedItem.querySelector('.feed-headline, .substack-title');
+            if (headline) {
+                document.getElementById('formula-text').textContent = headline.textContent;
+            }
+        }
+    });
+}
+
+function updateExcelClock() {
+    const clockEl = document.getElementById('excel-clock');
+    if (clockEl) {
+        clockEl.textContent = formatTimeFull(new Date());
+    }
+}
+
+function updateExcelStocks(quoteMap) {
+    // Update S&P in ribbon
+    const sp500 = quoteMap['^GSPC'];
+    if (sp500) {
+        const el = document.getElementById('excel-sp500');
+        if (el) {
+            const change = getQuoteChange(sp500);
+            const isPositive = change >= 0;
+            el.className = `ribbon-btn ${isPositive ? 'stock-positive' : 'stock-negative'}`;
+            el.innerHTML = `
+                <span class="ribbon-btn-icon" style="color: ${isPositive ? '#006600' : '#cc0000'};">${isPositive ? '▲' : '▼'}</span>
+                <span>S&P ${formatPercent(change)}</span>
+            `;
+        }
+    }
+
+    // Update DOW in ribbon
+    const dow = quoteMap['^DJI'];
+    if (dow) {
+        const el = document.getElementById('excel-dow');
+        if (el) {
+            const change = getQuoteChange(dow);
+            const isPositive = change >= 0;
+            el.className = `ribbon-btn ${isPositive ? 'stock-positive' : 'stock-negative'}`;
+            el.innerHTML = `
+                <span class="ribbon-btn-icon" style="color: ${isPositive ? '#006600' : '#cc0000'};">${isPositive ? '▲' : '▼'}</span>
+                <span>DOW ${formatPercent(change)}</span>
+            `;
+        }
+    }
+
+    // Update BTC in ribbon
+    const btc = quoteMap['BTC-USD'];
+    if (btc) {
+        const el = document.getElementById('excel-btc');
+        if (el) {
+            const change = getQuoteChange(btc);
+            const isPositive = change >= 0;
+            el.className = `ribbon-btn ${isPositive ? 'stock-positive' : 'stock-negative'}`;
+            el.innerHTML = `
+                <span class="ribbon-btn-icon" style="color: ${isPositive ? '#006600' : '#cc0000'};">${isPositive ? '▲' : '▼'}</span>
+                <span>BTC ${formatPercent(change)}</span>
+            `;
+        }
+    }
+}
+
+function updateExcelStatus(congress, weather) {
+    // Update congress status in ribbon
+    const congressEl = document.getElementById('excel-congress');
+    if (congressEl && congress) {
+        const isSession = congress.includes('SESSION');
+        congressEl.innerHTML = `
+            <span class="ribbon-btn-icon">🏛️</span>
+            <span style="color: ${isSession ? '#006600' : '#666'};">${congress}</span>
+        `;
+    }
+
+    // Update weather in ribbon
+    const weatherEl = document.getElementById('excel-weather');
+    if (weatherEl && weather) {
+        const hasAlert = !weather.includes('NO ALERT');
+        weatherEl.innerHTML = `
+            <span class="ribbon-btn-icon">${hasAlert ? '⚠️' : '🌤️'}</span>
+            <span style="color: ${hasAlert ? '#cc0000' : '#666'};">${weather}</span>
+        `;
+    }
+}
+
+function updateExcelTime() {
+    const el = document.getElementById('excel-updated');
+    if (el) {
+        el.textContent = `Updated: ${formatTime(new Date())}`;
+    }
 }
 
 // ============================================
@@ -456,6 +573,9 @@ function processStockData(quotes) {
             stocksContainer.appendChild(item);
         }
     });
+
+    // Update Excel ribbon stocks
+    updateExcelStocks(quoteMap);
 }
 
 function updateTickerItem(id, quote) {
@@ -801,15 +921,20 @@ async function fetchWeatherAlerts() {
         const data = await response.json();
 
         const alertEl = document.getElementById('weather-alert').querySelector('.status-value');
+        let weatherText = 'NO ALERTS';
 
         if (data.features && data.features.length > 0) {
             const alert = data.features[0].properties;
-            alertEl.textContent = alert.event.toUpperCase();
+            weatherText = alert.event.toUpperCase();
+            alertEl.textContent = weatherText;
             alertEl.className = 'status-value alert';
         } else {
-            alertEl.textContent = 'NO ALERTS';
+            alertEl.textContent = weatherText;
             alertEl.className = 'status-value ok';
         }
+
+        // Update Excel ribbon
+        updateExcelStatus(null, weatherText);
 
         State.cache.weather = { data: data, timestamp: Date.now() };
         saveCache();
@@ -818,6 +943,7 @@ async function fetchWeatherAlerts() {
         const alertEl = document.getElementById('weather-alert').querySelector('.status-value');
         alertEl.textContent = 'UNAVAILABLE';
         alertEl.className = 'status-value';
+        updateExcelStatus(null, 'UNAVAILABLE');
     }
 }
 
@@ -839,18 +965,25 @@ async function fetchCongressStatus() {
         const isWeekday = day >= 1 && day <= 5;
         const isBusinessHours = hour >= 9 && hour <= 18;
 
+        let congressText;
         // For demo purposes, use a simple rule
         // In production, use ProPublica API: https://api.propublica.org/congress/v1/
         if (isWeekday && isBusinessHours) {
-            statusEl.textContent = 'IN SESSION';
+            congressText = 'IN SESSION';
+            statusEl.textContent = congressText;
             statusEl.className = 'status-value session';
         } else {
-            statusEl.textContent = 'IN RECESS';
+            congressText = 'IN RECESS';
+            statusEl.textContent = congressText;
             statusEl.className = 'status-value recess';
         }
+
+        // Update Excel ribbon
+        updateExcelStatus(congressText, null);
     } catch (e) {
         statusEl.textContent = 'UNKNOWN';
         statusEl.className = 'status-value';
+        updateExcelStatus('UNKNOWN', null);
     }
 }
 
@@ -991,6 +1124,9 @@ async function updateAll() {
     // Update last updated time
     State.lastUpdate = new Date();
     document.getElementById('last-updated').textContent = `Updated: ${formatTime(State.lastUpdate)}`;
+
+    // Update Excel ribbon time
+    updateExcelTime();
 
     console.log('Refresh complete');
 }

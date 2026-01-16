@@ -74,6 +74,37 @@
     --border-bright: #999999;
 }
 
+/* Excel Mode */
+[data-theme="excel"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f3f3f3;
+    --bg-tertiary: #e6e6e6;
+    --bg-hover: #cce5ff;
+
+    --text-primary: #000000;
+    --text-secondary: #333333;
+    --text-muted: #666666;
+
+    --accent-green: #006600;
+    --accent-red: #cc0000;
+    --accent-cyan: #217346;
+    --accent-yellow: #996600;
+    --accent-orange: #cc5500;
+
+    --border-color: #c0c0c0;
+    --border-bright: #a0a0a0;
+
+    /* Excel-specific colors */
+    --excel-green: #217346;
+    --excel-green-dark: #185c37;
+    --excel-ribbon-bg: #f3f3f3;
+    --excel-cell-selected: #cce5ff;
+    --excel-header-bg: linear-gradient(180deg, #f8f8f8 0%, #e8e8e8 100%);
+
+    /* Override fonts for Excel look */
+    --font-mono: 'Segoe UI', Calibri, Arial, sans-serif;
+}
+
 /* === Reset & Base === */
 *, *::before, *::after {
     margin: 0;
@@ -754,6 +785,376 @@ body {
         transform: translateX(0);
         opacity: 1;
     }
+}
+
+/* ============================================
+   EXCEL THEME STYLES
+   ============================================ */
+
+/* Hide Excel elements by default */
+.excel-title-bar,
+.excel-ribbon,
+.excel-formula-bar,
+.excel-sheet-tabs,
+.excel-row-numbers {
+    display: none;
+}
+
+/* Show Excel elements only in Excel mode */
+[data-theme="excel"] .excel-title-bar,
+[data-theme="excel"] .excel-ribbon,
+[data-theme="excel"] .excel-formula-bar,
+[data-theme="excel"] .excel-sheet-tabs {
+    display: flex;
+}
+
+[data-theme="excel"] .excel-row-numbers {
+    display: block;
+}
+
+/* Hide standard elements in Excel mode */
+[data-theme="excel"] #ticker-bar,
+[data-theme="excel"] #breaking-bar {
+    display: none;
+}
+
+/* Excel Title Bar */
+.excel-title-bar {
+    background: linear-gradient(180deg, #217346 0%, #185c37 100%);
+    color: white;
+    padding: 4px 8px;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    height: 28px;
+}
+
+.excel-icon {
+    width: 18px;
+    height: 18px;
+    background: white;
+    color: #217346;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.excel-title {
+    flex: 1;
+}
+
+.excel-window-controls {
+    display: flex;
+    gap: 2px;
+}
+
+.excel-window-controls span {
+    width: 32px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.excel-window-controls span:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Excel Ribbon */
+.excel-ribbon {
+    background: #f3f3f3;
+    border-bottom: 1px solid #d4d4d4;
+    flex-direction: column;
+}
+
+.ribbon-tabs {
+    display: flex;
+    background: #217346;
+    padding: 0 4px;
+}
+
+.ribbon-tab {
+    padding: 6px 16px;
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    font-size: 11px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+}
+
+.ribbon-tab:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.ribbon-tab.active {
+    background: #f3f3f3;
+    color: #217346;
+}
+
+.ribbon-content {
+    display: flex;
+    padding: 4px 8px;
+    gap: 16px;
+    border-bottom: 1px solid #d4d4d4;
+    min-height: 70px;
+    overflow-x: auto;
+}
+
+.ribbon-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 12px;
+    border-right: 1px solid #d4d4d4;
+}
+
+.ribbon-group:last-child {
+    border-right: none;
+}
+
+.ribbon-group-label {
+    font-size: 9px;
+    color: #666;
+    margin-top: 4px;
+}
+
+.ribbon-buttons {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    align-items: center;
+}
+
+.ribbon-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 2px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 9px;
+}
+
+.ribbon-btn:hover {
+    background: #e5e5e5;
+}
+
+.ribbon-btn-icon {
+    font-size: 18px;
+    margin-bottom: 2px;
+}
+
+.ribbon-btn.stock-positive {
+    background: #e6ffe6;
+    border: 1px solid #006600;
+}
+
+.ribbon-btn.stock-negative {
+    background: #ffe6e6;
+    border: 1px solid #cc0000;
+}
+
+/* Excel Formula Bar */
+.excel-formula-bar {
+    align-items: center;
+    background: white;
+    border-bottom: 1px solid #d4d4d4;
+    height: 26px;
+}
+
+.formula-cell-ref {
+    width: 80px;
+    padding: 4px 8px;
+    border-right: 1px solid #d4d4d4;
+    font-size: 11px;
+    background: #f8f8f8;
+    text-align: center;
+}
+
+.formula-input {
+    flex: 1;
+    padding: 4px 8px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.formula-fx {
+    color: #666;
+    font-style: italic;
+}
+
+.formula-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Excel Sheet Tabs */
+.excel-sheet-tabs {
+    background: #e6e6e6;
+    border-top: 1px solid #c0c0c0;
+    padding: 4px 4px 0;
+    gap: 2px;
+    height: 28px;
+}
+
+.sheet-tab {
+    padding: 4px 16px;
+    background: #f0f0f0;
+    border: 1px solid #c0c0c0;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    font-size: 10px;
+    font-family: inherit;
+}
+
+.sheet-tab:hover {
+    background: #fff;
+}
+
+.sheet-tab.active {
+    background: white;
+    border-bottom: 1px solid white;
+    margin-bottom: -1px;
+}
+
+.sheet-tab-add {
+    width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* Excel Grid Layout Override */
+[data-theme="excel"] body {
+    grid-template-rows: 28px auto 26px 1fr 28px 24px;
+    grid-template-areas:
+        "excel-title excel-title"
+        "excel-ribbon excel-ribbon"
+        "excel-formula excel-formula"
+        "main sidebar"
+        "excel-tabs excel-tabs"
+        "status status";
+}
+
+[data-theme="excel"] .excel-title-bar { grid-area: excel-title; }
+[data-theme="excel"] .excel-ribbon { grid-area: excel-ribbon; }
+[data-theme="excel"] .excel-formula-bar { grid-area: excel-formula; }
+[data-theme="excel"] .excel-sheet-tabs { grid-area: excel-tabs; }
+
+/* Excel Main Content Styling */
+[data-theme="excel"] #main-content {
+    background: #e6e6e6;
+    gap: 0;
+    border: 1px solid #c0c0c0;
+}
+
+[data-theme="excel"] .panel {
+    border-right: 2px solid #a0a0a0;
+}
+
+[data-theme="excel"] .panel:last-child {
+    border-right: none;
+}
+
+[data-theme="excel"] .panel-header {
+    background: #217346;
+    color: white;
+    border-bottom: 2px solid #185c37;
+}
+
+[data-theme="excel"] .panel-header h2 {
+    color: white;
+    font-size: 11px;
+}
+
+[data-theme="excel"] .panel-source {
+    color: rgba(255,255,255,0.8);
+}
+
+[data-theme="excel"] .panel-content {
+    background: white;
+}
+
+/* Excel Feed Items as Table Rows */
+[data-theme="excel"] .feed-item {
+    border-bottom: 1px solid #e8e8e8;
+    padding: 2px 8px;
+}
+
+[data-theme="excel"] .feed-item:hover {
+    background: #e8f4fc;
+}
+
+[data-theme="excel"] .feed-item a {
+    font-size: 11px;
+}
+
+[data-theme="excel"] .feed-stats {
+    background: #f0f0f0;
+    border-bottom: 2px solid #a0a0a0;
+    font-weight: 600;
+}
+
+[data-theme="excel"] .substack-item {
+    border-bottom: 1px solid #e8e8e8;
+    padding: 4px 8px;
+}
+
+[data-theme="excel"] .substack-item:hover {
+    background: #e8f4fc;
+}
+
+/* Excel Status Bar */
+[data-theme="excel"] #status-bar {
+    background: #217346;
+    color: white;
+    border-top: none;
+}
+
+[data-theme="excel"] #status-bar .status-ok {
+    color: #90EE90;
+}
+
+[data-theme="excel"] #status-bar .status-error {
+    color: #FFB6C1;
+}
+
+/* Excel Twitter Sidebar */
+[data-theme="excel"] #twitter-sidebar {
+    border-left: 2px solid #a0a0a0;
+}
+
+[data-theme="excel"] #twitter-sidebar .panel-header {
+    background: #217346;
+}
+
+[data-theme="excel"] .twitter-tab {
+    background: #f0f0f0;
+    border: 1px solid #c0c0c0;
+}
+
+[data-theme="excel"] .twitter-tab.active {
+    background: #217346;
+    color: white;
+    border-color: #217346;
 }
 
 /* === Utilities === */
