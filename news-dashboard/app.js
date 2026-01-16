@@ -13,6 +13,11 @@ const CONFIG = {
     // Refresh interval in milliseconds
     REFRESH_INTERVAL: 60000,
 
+    // Instapaper credentials (for auto-save)
+    // Leave INSTAPAPER_USERNAME empty to disable
+    INSTAPAPER_USERNAME: '',  // Your Instapaper email/username
+    INSTAPAPER_PASSWORD: '',  // Your password (or leave empty if no password set)
+
     // CORS Proxy options (try multiple if one fails)
     CORS_PROXIES: [
         'https://api.allorigins.win/raw?url=',
@@ -112,8 +117,8 @@ function checkDailyReset() {
     }
 }
 
-// Mark an item as read
-function markAsRead(itemId) {
+// Mark an item as read and save to Instapaper
+function markAsRead(itemId, url, title) {
     State.readItems[itemId] = true;
     localStorage.setItem('read-items', JSON.stringify(State.readItems));
 
@@ -122,6 +127,56 @@ function markAsRead(itemId) {
     if (element) {
         element.classList.add('read');
     }
+
+    // Save to Instapaper if configured
+    if (CONFIG.INSTAPAPER_USERNAME && url) {
+        saveToInstapaper(url, title);
+    }
+}
+
+// Save article to Instapaper
+async function saveToInstapaper(url, title) {
+    try {
+        const params = new URLSearchParams({
+            username: CONFIG.INSTAPAPER_USERNAME,
+            password: CONFIG.INSTAPAPER_PASSWORD || '',
+            url: url,
+            title: title || ''
+        });
+
+        // Use CORS proxy to reach Instapaper API
+        const proxyUrl = CONFIG.CORS_PROXIES[0] + encodeURIComponent(
+            `https://www.instapaper.com/api/add?${params.toString()}`
+        );
+
+        const response = await fetch(proxyUrl, { method: 'GET' });
+
+        if (response.ok) {
+            console.log('Saved to Instapaper:', title || url);
+            showInstapaperNotification('Saved to Instapaper');
+        } else {
+            console.warn('Instapaper save failed:', response.status);
+            showInstapaperNotification('Instapaper save failed', true);
+        }
+    } catch (e) {
+        console.warn('Instapaper error:', e);
+        // Fallback: open Instapaper in background tab
+        const instapaperUrl = `https://www.instapaper.com/hello2?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title || '')}`;
+        window.open(instapaperUrl, '_blank', 'width=500,height=350');
+    }
+}
+
+// Show brief notification for Instapaper saves
+function showInstapaperNotification(message, isError = false) {
+    const notification = document.createElement('div');
+    notification.className = `instapaper-notification ${isError ? 'error' : 'success'}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 300);
+    }, 2000);
 }
 
 // Generate unique ID for an item
@@ -580,9 +635,11 @@ function renderHeadlinesFeed(container, items) {
         </div>
     ` + items.map(item => {
         const isRead = State.readItems[item.id];
+        const escapedTitle = item.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const escapedLink = item.link.replace(/'/g, "\\'");
         return `
             <div class="feed-item ${isRead ? 'read' : ''}" data-item-id="${item.id}">
-                <a href="${item.link}" target="_blank" rel="noopener" onclick="markAsRead('${item.id}')">
+                <a href="${item.link}" target="_blank" rel="noopener" onclick="markAsRead('${item.id}', '${escapedLink}', '${escapedTitle}')">
                     <span class="feed-source source-${item.source}">${item.sourceName}</span>
                     <span class="feed-headline">${item.title}</span>
                     <span class="feed-time">${formatRelativeTime(new Date(item.date))}</span>
@@ -654,9 +711,11 @@ function renderSubstacksFeed(container, items) {
         </div>
     ` + items.map(item => {
         const isRead = State.readItems[item.id];
+        const escapedTitle = item.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const escapedLink = item.link.replace(/'/g, "\\'");
         return `
             <div class="substack-item ${isRead ? 'read' : ''}" data-item-id="${item.id}">
-                <a href="${item.link}" target="_blank" rel="noopener" onclick="markAsRead('${item.id}')">
+                <a href="${item.link}" target="_blank" rel="noopener" onclick="markAsRead('${item.id}', '${escapedLink}', '${escapedTitle}')">
                     <div class="substack-meta">
                         <span class="substack-author">${item.author}</span>
                         <span class="substack-date">${formatRelativeTime(new Date(item.date))}</span>

@@ -717,6 +717,45 @@ body {
     }
 }
 
+/* === Instapaper Notification === */
+.instapaper-notification {
+    position: fixed;
+    bottom: 40px;
+    right: 20px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: var(--font-size-sm);
+    font-family: var(--font-mono);
+    z-index: 10000;
+    animation: slide-in 0.3s ease;
+}
+
+.instapaper-notification.success {
+    background: var(--accent-green);
+    color: #000;
+}
+
+.instapaper-notification.error {
+    background: var(--accent-red);
+    color: #fff;
+}
+
+.instapaper-notification.fade-out {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+@keyframes slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 /* === Utilities === */
 .hidden {
     display: none !important;
