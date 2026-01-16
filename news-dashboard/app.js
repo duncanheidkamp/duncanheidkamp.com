@@ -84,8 +84,49 @@ const State = {
     feedsTotal: 0,
     errors: 0,
     cache: JSON.parse(localStorage.getItem('dashboard-cache') || '{}'),
-    currentProxy: 0
+    currentProxy: 0,
+    // Daily accumulation
+    todayDate: new Date().toDateString(),
+    dailyHeadlines: JSON.parse(localStorage.getItem('daily-headlines') || '[]'),
+    dailySubstacks: JSON.parse(localStorage.getItem('daily-substacks') || '[]'),
+    readItems: JSON.parse(localStorage.getItem('read-items') || '{}')
 };
+
+// Check if it's a new day and reset accumulated items
+function checkDailyReset() {
+    const today = new Date().toDateString();
+    const storedDate = localStorage.getItem('daily-date');
+
+    if (storedDate !== today) {
+        // New day - reset everything
+        State.dailyHeadlines = [];
+        State.dailySubstacks = [];
+        State.readItems = {};
+        State.todayDate = today;
+        localStorage.setItem('daily-date', today);
+        localStorage.setItem('daily-headlines', '[]');
+        localStorage.setItem('daily-substacks', '[]');
+        localStorage.setItem('read-items', '{}');
+        console.log('New day detected - resetting daily feeds');
+    }
+}
+
+// Mark an item as read
+function markAsRead(itemId) {
+    State.readItems[itemId] = true;
+    localStorage.setItem('read-items', JSON.stringify(State.readItems));
+
+    // Update the UI
+    const element = document.querySelector(`[data-item-id="${itemId}"]`);
+    if (element) {
+        element.classList.add('read');
+    }
+}
+
+// Generate unique ID for an item
+function getItemId(item) {
+    return btoa(encodeURIComponent(item.title + item.link)).slice(0, 32);
+}
 
 // ============================================
 // UTILITIES
@@ -446,12 +487,12 @@ function renderWireFeed(container, items) {
 }
 
 // ============================================
-// HEADLINES FEED
+// HEADLINES FEED (Daily Accumulation)
 // ============================================
 
 async function fetchHeadlinesFeed() {
     const container = document.getElementById('headlines-feed');
-    let allItems = [];
+    let newItems = [];
     let feedsLoaded = 0;
 
     for (const feed of CONFIG.RSS_FEEDS.headlines) {
@@ -461,8 +502,9 @@ async function fetchHeadlinesFeed() {
             items.forEach(item => {
                 item.source = feed.source;
                 item.sourceName = feed.name;
+                item.id = getItemId(item);
             });
-            allItems = allItems.concat(items.slice(0, 5)); // Limit per source
+            newItems = newItems.concat(items.slice(0, 5));
             feedsLoaded++;
         } catch (e) {
             console.warn(`Headlines feed ${feed.name} failed:`, e);
@@ -470,19 +512,22 @@ async function fetchHeadlinesFeed() {
         }
     }
 
-    // Sort by date
-    allItems.sort((a, b) => b.date - a.date);
+    // Merge with existing daily headlines (avoid duplicates)
+    const existingIds = new Set(State.dailyHeadlines.map(item => item.id));
+    newItems.forEach(item => {
+        if (!existingIds.has(item.id)) {
+            State.dailyHeadlines.push(item);
+        }
+    });
 
-    // Cache
-    if (allItems.length > 0) {
-        State.cache.headlines = { items: allItems.slice(0, 25), timestamp: Date.now() };
-        saveCache();
-    } else if (State.cache.headlines) {
-        allItems = State.cache.headlines.items;
-    }
+    // Sort by date (newest first)
+    State.dailyHeadlines.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Save to localStorage
+    localStorage.setItem('daily-headlines', JSON.stringify(State.dailyHeadlines));
 
     // Render
-    renderHeadlinesFeed(container, allItems.slice(0, 25));
+    renderHeadlinesFeed(container, State.dailyHeadlines);
     State.feedsLoaded += feedsLoaded;
     updateFeedStatus();
 }
@@ -493,23 +538,34 @@ function renderHeadlinesFeed(container, items) {
         return;
     }
 
-    container.innerHTML = items.map(item => `
-        <div class="feed-item">
-            <a href="${item.link}" target="_blank" rel="noopener">
-                <span class="feed-source source-${item.source}">${item.sourceName}</span>
-                <span class="feed-headline">${item.title}</span>
-            </a>
+    const unreadCount = items.filter(item => !State.readItems[item.id]).length;
+
+    container.innerHTML = `
+        <div class="feed-stats">
+            <span class="unread-count">${unreadCount} unread</span>
+            <span class="total-count">${items.length} total today</span>
         </div>
-    `).join('');
+    ` + items.map(item => {
+        const isRead = State.readItems[item.id];
+        return `
+            <div class="feed-item ${isRead ? 'read' : ''}" data-item-id="${item.id}">
+                <a href="${item.link}" target="_blank" rel="noopener" onclick="markAsRead('${item.id}')">
+                    <span class="feed-source source-${item.source}">${item.sourceName}</span>
+                    <span class="feed-headline">${item.title}</span>
+                    <span class="feed-time">${formatRelativeTime(new Date(item.date))}</span>
+                </a>
+            </div>
+        `;
+    }).join('');
 }
 
 // ============================================
-// SUBSTACKS FEED
+// SUBSTACKS FEED (Daily Accumulation)
 // ============================================
 
 async function fetchSubstacksFeed() {
     const container = document.getElementById('substacks-feed');
-    let allItems = [];
+    let newItems = [];
     let feedsLoaded = 0;
 
     for (const feed of CONFIG.RSS_FEEDS.substacks) {
@@ -520,8 +576,9 @@ async function fetchSubstacksFeed() {
                 item.source = feed.source;
                 item.sourceName = feed.name;
                 item.author = feed.author;
+                item.id = getItemId(item);
             });
-            allItems = allItems.concat(items.slice(0, 3)); // Limit per source
+            newItems = newItems.concat(items.slice(0, 3));
             feedsLoaded++;
         } catch (e) {
             console.warn(`Substack ${feed.name} failed:`, e);
@@ -529,19 +586,22 @@ async function fetchSubstacksFeed() {
         }
     }
 
-    // Sort by date
-    allItems.sort((a, b) => b.date - a.date);
+    // Merge with existing daily substacks (avoid duplicates)
+    const existingIds = new Set(State.dailySubstacks.map(item => item.id));
+    newItems.forEach(item => {
+        if (!existingIds.has(item.id)) {
+            State.dailySubstacks.push(item);
+        }
+    });
 
-    // Cache
-    if (allItems.length > 0) {
-        State.cache.substacks = { items: allItems.slice(0, 15), timestamp: Date.now() };
-        saveCache();
-    } else if (State.cache.substacks) {
-        allItems = State.cache.substacks.items;
-    }
+    // Sort by date (newest first)
+    State.dailySubstacks.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Save to localStorage
+    localStorage.setItem('daily-substacks', JSON.stringify(State.dailySubstacks));
 
     // Render
-    renderSubstacksFeed(container, allItems.slice(0, 15));
+    renderSubstacksFeed(container, State.dailySubstacks);
     State.feedsLoaded += feedsLoaded;
     updateFeedStatus();
 }
@@ -552,17 +612,27 @@ function renderSubstacksFeed(container, items) {
         return;
     }
 
-    container.innerHTML = items.map(item => `
-        <div class="substack-item">
-            <a href="${item.link}" target="_blank" rel="noopener">
-                <div class="substack-meta">
-                    <span class="substack-author">${item.author}</span>
-                    <span class="substack-date">${formatRelativeTime(item.date)}</span>
-                </div>
-                <div class="substack-title">${item.title}</div>
-            </a>
+    const unreadCount = items.filter(item => !State.readItems[item.id]).length;
+
+    container.innerHTML = `
+        <div class="feed-stats">
+            <span class="unread-count">${unreadCount} unread</span>
+            <span class="total-count">${items.length} total today</span>
         </div>
-    `).join('');
+    ` + items.map(item => {
+        const isRead = State.readItems[item.id];
+        return `
+            <div class="substack-item ${isRead ? 'read' : ''}" data-item-id="${item.id}">
+                <a href="${item.link}" target="_blank" rel="noopener" onclick="markAsRead('${item.id}')">
+                    <div class="substack-meta">
+                        <span class="substack-author">${item.author}</span>
+                        <span class="substack-date">${formatRelativeTime(new Date(item.date))}</span>
+                    </div>
+                    <div class="substack-title">${item.title}</div>
+                </a>
+            </div>
+        `;
+    }).join('');
 }
 
 // ============================================
@@ -803,6 +873,9 @@ async function updateAll() {
 
 async function init() {
     console.log('News Dashboard initializing...');
+
+    // Check if it's a new day (reset accumulated items at midnight)
+    checkDailyReset();
 
     // Initialize theme
     initTheme();

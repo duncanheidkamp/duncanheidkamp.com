@@ -565,6 +565,51 @@ body {
     text-align: center;
 }
 
+/* === Feed Stats Bar === */
+.feed-stats {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    font-size: var(--font-size-xs);
+}
+
+.unread-count {
+    color: var(--accent-cyan);
+    font-weight: 600;
+}
+
+.total-count {
+    color: var(--text-muted);
+}
+
+/* === Read Items === */
+.feed-item.read,
+.substack-item.read {
+    opacity: 0.5;
+}
+
+.feed-item.read .feed-headline,
+.substack-item.read .substack-title {
+    color: var(--text-muted);
+}
+
+.feed-item.read:hover,
+.substack-item.read:hover {
+    opacity: 0.7;
+}
+
+.feed-item.read a,
+.substack-item.read a {
+    color: var(--text-muted);
+}
+
+.feed-item.read:hover a,
+.substack-item.read:hover a {
+    color: var(--text-secondary);
+}
+
 /* === Sports Ticker === */
 .sports-ticker {
     display: flex;
