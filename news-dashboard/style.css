@@ -441,6 +441,7 @@ body {
 /* Source Colors */
 .source-ap { background: var(--color-ap); color: #fff; }
 .source-reuters { background: var(--color-reuters); color: #fff; }
+.source-drudge { background: #000000; color: #ff0000; border: 1px solid #ff0000; }
 .source-nyt { background: var(--color-nyt); color: #fff; }
 .source-wsj { background: var(--color-wsj); color: #fff; }
 .source-bloomberg { background: var(--color-bloomberg); color: #fff; }

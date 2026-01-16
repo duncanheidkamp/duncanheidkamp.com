@@ -29,6 +29,7 @@ const CONFIG = {
         ],
         // Major publications
         headlines: [
+            { name: 'Drudge', url: 'https://feedpress.me/drudgereportfeed', source: 'drudge' },
             { name: 'NYT', url: 'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml', source: 'nyt' },
             { name: 'WSJ', url: 'https://feeds.wsj.com/rss/RSSWorldNews.xml', source: 'wsj' },
             { name: 'Atlantic', url: 'https://www.theatlantic.com/feed/all/', source: 'atlantic' },
@@ -534,7 +535,9 @@ async function fetchHeadlinesFeed() {
                 item.sourceName = feed.name;
                 item.id = getItemId(item);
             });
-            newItems = newItems.concat(items.slice(0, 5));
+            // Drudge has more links, pull more from it
+            const limit = feed.source === 'drudge' ? 20 : 5;
+            newItems = newItems.concat(items.slice(0, limit));
             feedsLoaded++;
         } catch (e) {
             console.warn(`Headlines feed ${feed.name} failed:`, e);
