@@ -58,12 +58,12 @@ const CONFIG = {
 
     // Sports teams (ESPN team IDs)
     SPORTS: {
-        cubs: { name: 'Cubs', sport: 'baseball', league: 'mlb', team: 'chc' },
-        bears: { name: 'Bears', sport: 'football', league: 'nfl', team: 'chi' },
-        bulls: { name: 'Bulls', sport: 'basketball', league: 'nba', team: 'chi' },
-        blackhawks: { name: 'Hawks', sport: 'hockey', league: 'nhl', team: 'chi' },
-        iuFootball: { name: 'IU FB', sport: 'football', league: 'college-football', team: '84' },
-        iuBasketball: { name: 'IU BB', sport: 'basketball', league: 'mens-college-basketball', team: '84' }
+        cubs: { name: 'Cubs', sport: 'baseball', league: 'mlb', team: 'chc', abbrev: 'CHC' },
+        bears: { name: 'Bears', sport: 'football', league: 'nfl', team: 'chi', abbrev: 'CHI' },
+        bulls: { name: 'Bulls', sport: 'basketball', league: 'nba', team: 'chi', abbrev: 'CHI' },
+        blackhawks: { name: 'Hawks', sport: 'hockey', league: 'nhl', team: 'chi', abbrev: 'CHI' },
+        iuFootball: { name: 'IU FB', sport: 'football', league: 'college-football', team: '84', abbrev: 'IU' },
+        iuBasketball: { name: 'IU BB', sport: 'basketball', league: 'mens-college-basketball', team: '84', abbrev: 'IU' }
     },
 
     // Weather (Chicago)
@@ -384,12 +384,14 @@ function processStockData(quotes) {
     CONFIG.STOCKS.forEach(symbol => {
         const quote = quoteMap[symbol];
         if (quote) {
+            const price = getQuotePrice(quote);
+            const change = getQuoteChange(quote);
             const item = document.createElement('span');
             item.className = 'ticker-item';
             item.innerHTML = `
                 <span class="ticker-label">${symbol}</span>
-                <span class="ticker-value">${formatPrice(quote.regularMarketPrice)}</span>
-                <span class="ticker-change ${getChangeClass(quote.regularMarketChangePercent)}">${formatPercent(quote.regularMarketChangePercent)}</span>
+                <span class="ticker-value">${formatPrice(price)}</span>
+                <span class="ticker-change ${getChangeClass(change)}">${formatPercent(change)}</span>
             `;
             stocksContainer.appendChild(item);
         }
@@ -403,11 +405,39 @@ function updateTickerItem(id, quote) {
     const valueEl = el.querySelector('.ticker-value');
     const changeEl = el.querySelector('.ticker-change');
 
-    if (valueEl) valueEl.textContent = formatPrice(quote.regularMarketPrice);
+    // Get price with fallbacks for off-hours
+    const price = getQuotePrice(quote);
+    const change = getQuoteChange(quote);
+
+    if (valueEl) valueEl.textContent = formatPrice(price);
     if (changeEl) {
-        changeEl.textContent = formatPercent(quote.regularMarketChangePercent);
-        changeEl.className = `ticker-change ${getChangeClass(quote.regularMarketChangePercent)}`;
+        changeEl.textContent = formatPercent(change);
+        changeEl.className = `ticker-change ${getChangeClass(change)}`;
     }
+}
+
+/**
+ * Get the best available price from a quote
+ * Falls back through: regularMarket -> postMarket -> preMarket -> previousClose
+ */
+function getQuotePrice(quote) {
+    if (quote.regularMarketPrice) return quote.regularMarketPrice;
+    if (quote.postMarketPrice) return quote.postMarketPrice;
+    if (quote.preMarketPrice) return quote.preMarketPrice;
+    if (quote.regularMarketPreviousClose) return quote.regularMarketPreviousClose;
+    return null;
+}
+
+/**
+ * Get the best available change percentage from a quote
+ */
+function getQuoteChange(quote) {
+    if (quote.regularMarketChangePercent !== undefined && quote.regularMarketChangePercent !== null) {
+        return quote.regularMarketChangePercent;
+    }
+    if (quote.postMarketChangePercent !== undefined) return quote.postMarketChangePercent;
+    if (quote.preMarketChangePercent !== undefined) return quote.preMarketChangePercent;
+    return 0;
 }
 
 function formatPrice(price) {
@@ -636,34 +666,63 @@ function renderSubstacksFeed(container, items) {
 }
 
 // ============================================
-// BREAKING NEWS
+// BREAKING NEWS (Scrolling Ticker)
 // ============================================
 
 async function fetchBreakingNews() {
     try {
-        // Use AP top news via NPR (more reliable)
-        const url = 'https://feeds.npr.org/1001/rss.xml';
-        const xml = await fetchWithProxy(url);
-        const items = parseRSS(xml);
+        // Fetch from multiple sources for variety
+        const sources = [
+            'https://feeds.npr.org/1001/rss.xml',
+            'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml'
+        ];
 
-        if (items.length > 0) {
-            const top = items[0];
-            document.getElementById('breaking-headline').innerHTML =
-                `<a href="${top.link}" target="_blank">${top.title}</a>`;
+        let allItems = [];
 
-            State.cache.breaking = { item: top, timestamp: Date.now() };
+        for (const url of sources) {
+            try {
+                const xml = await fetchWithProxy(url);
+                const items = parseRSS(xml);
+                allItems = allItems.concat(items.slice(0, 5));
+            } catch (e) {
+                console.warn('Breaking news source failed:', url, e);
+            }
+        }
+
+        // Sort by date and take top 10
+        allItems.sort((a, b) => b.date - a.date);
+        const topItems = allItems.slice(0, 10);
+
+        if (topItems.length > 0) {
+            renderBreakingTicker(topItems);
+            State.cache.breaking = { items: topItems, timestamp: Date.now() };
             saveCache();
         }
     } catch (e) {
         console.warn('Breaking news failed:', e);
-        if (State.cache.breaking) {
-            const top = State.cache.breaking.item;
-            document.getElementById('breaking-headline').innerHTML =
-                `<a href="${top.link}" target="_blank">${top.title}</a>`;
+        if (State.cache.breaking && State.cache.breaking.items) {
+            renderBreakingTicker(State.cache.breaking.items);
         } else {
             document.getElementById('breaking-headline').textContent = 'Breaking news unavailable';
         }
     }
+}
+
+function renderBreakingTicker(items) {
+    const container = document.getElementById('breaking-headline');
+
+    // Create scrolling content with all headlines
+    const tickerContent = items.map(item =>
+        `<span class="ticker-headline"><a href="${item.link}" target="_blank">${item.title}</a></span>`
+    ).join('<span class="ticker-separator">•••</span>');
+
+    // Duplicate for seamless loop
+    container.innerHTML = `
+        <div class="ticker-scroll">
+            <div class="ticker-content">${tickerContent}</div>
+            <div class="ticker-content">${tickerContent}</div>
+        </div>
+    `;
 }
 
 // ============================================
@@ -758,7 +817,10 @@ async function fetchSportsData() {
             }
 
             if (nextGame) {
-                const opponent = nextGame.competitions?.[0]?.competitors?.find(c => c.team.abbreviation !== team.team.toUpperCase());
+                // Find opponent by comparing against team abbreviation
+                const opponent = nextGame.competitions?.[0]?.competitors?.find(c =>
+                    c.team.abbreviation.toUpperCase() !== team.abbrev.toUpperCase()
+                );
                 const gameDate = new Date(nextGame.date);
 
                 const item = document.createElement('span');
