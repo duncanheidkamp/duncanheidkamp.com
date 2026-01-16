@@ -22,19 +22,19 @@ const CONFIG = {
 
     // RSS Feed Sources
     RSS_FEEDS: {
-        // Wire feeds
+        // Wire feeds - using rss2json API for reliability
         wire: [
-            { name: 'AP', url: 'https://rsshub.app/apnews/topics/apf-topnews', source: 'ap' },
-            { name: 'Reuters', url: 'https://rsshub.app/reuters/world', source: 'reuters' }
+            { name: 'AP', url: 'https://feedx.net/rss/ap.xml', source: 'ap' },
+            { name: 'Reuters', url: 'https://feedx.net/rss/reuters.xml', source: 'reuters' }
         ],
         // Major publications
         headlines: [
             { name: 'NYT', url: 'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml', source: 'nyt' },
-            { name: 'WSJ', url: 'https://feeds.a]wsj.com/rss/RSSWorldNews.xml', source: 'wsj' },
+            { name: 'WSJ', url: 'https://feeds.wsj.com/rss/RSSWorldNews.xml', source: 'wsj' },
             { name: 'Atlantic', url: 'https://www.theatlantic.com/feed/all/', source: 'atlantic' },
             { name: 'Tribune', url: 'https://www.chicagotribune.com/arcio/rss/', source: 'tribune' },
             { name: 'Block Club', url: 'https://blockclubchicago.org/feed/', source: 'blockclub' },
-            { name: 'Onion', url: 'https://www.theonion.com/rss', source: 'onion' }
+            { name: 'Onion', url: 'https://theonion.com/feed/', source: 'onion' }
         ],
         // Substacks
         substacks: [
@@ -133,12 +133,27 @@ function formatRelativeTime(date) {
  * Fetch with CORS proxy fallback
  */
 async function fetchWithProxy(url) {
-    const proxies = CONFIG.CORS_PROXIES;
+    // Try rss2json first (most reliable for RSS)
+    try {
+        const rss2jsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
+        const response = await fetch(rss2jsonUrl);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.status === 'ok' && data.items) {
+                // Convert rss2json format to XML-like structure for parsing
+                return convertRss2JsonToXml(data);
+            }
+        }
+    } catch (e) {
+        console.warn('rss2json failed:', e.message);
+    }
 
+    // Fallback to CORS proxies
+    const proxies = CONFIG.CORS_PROXIES;
     for (let i = 0; i < proxies.length; i++) {
         try {
             const proxyUrl = proxies[(State.currentProxy + i) % proxies.length] + encodeURIComponent(url);
-            const response = await fetch(proxyUrl, { timeout: 10000 });
+            const response = await fetch(proxyUrl);
             if (response.ok) {
                 State.currentProxy = (State.currentProxy + i) % proxies.length;
                 return await response.text();
@@ -148,6 +163,21 @@ async function fetchWithProxy(url) {
         }
     }
     throw new Error('All proxies failed');
+}
+
+/**
+ * Convert rss2json response to simple XML for parser compatibility
+ */
+function convertRss2JsonToXml(data) {
+    const items = data.items.map(item => `
+        <item>
+            <title><![CDATA[${item.title || ''}]]></title>
+            <link>${item.link || ''}</link>
+            <pubDate>${item.pubDate || ''}</pubDate>
+        </item>
+    `).join('');
+
+    return `<?xml version="1.0"?><rss><channel>${items}</channel></rss>`;
 }
 
 /**
@@ -541,8 +571,8 @@ function renderSubstacksFeed(container, items) {
 
 async function fetchBreakingNews() {
     try {
-        // Use AP top news
-        const url = 'https://rsshub.app/apnews/topics/apf-topnews';
+        // Use AP top news via NPR (more reliable)
+        const url = 'https://feeds.npr.org/1001/rss.xml';
         const xml = await fetchWithProxy(url);
         const items = parseRSS(xml);
 
@@ -560,6 +590,8 @@ async function fetchBreakingNews() {
             const top = State.cache.breaking.item;
             document.getElementById('breaking-headline').innerHTML =
                 `<a href="${top.link}" target="_blank">${top.title}</a>`;
+        } else {
+            document.getElementById('breaking-headline').textContent = 'Breaking news unavailable';
         }
     }
 }
