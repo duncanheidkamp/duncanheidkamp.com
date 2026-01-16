@@ -50,9 +50,9 @@
             </div>
             <div class="ribbon-group">
                 <div class="ribbon-buttons">
-                    <button class="ribbon-btn" onclick="document.getElementById('wire-panel').scrollIntoView()">
-                        <span class="ribbon-btn-icon">📰</span>
-                        <span>Wire</span>
+                    <button class="ribbon-btn" onclick="document.getElementById('reading-panel').scrollIntoView()">
+                        <span class="ribbon-btn-icon">📚</span>
+                        <span>Reading</span>
                     </button>
                     <button class="ribbon-btn" onclick="document.getElementById('headlines-panel').scrollIntoView()">
                         <span class="ribbon-btn-icon">📋</span>
@@ -119,7 +119,7 @@
     <!-- Excel Sheet Tabs (at bottom, positioned via CSS grid) -->
     <div class="excel-sheet-tabs">
         <button class="sheet-tab active" data-panel="headlines">Headlines</button>
-        <button class="sheet-tab" data-panel="wire">Wire</button>
+        <button class="sheet-tab" data-panel="reading">Reading</button>
         <button class="sheet-tab" data-panel="substacks">Substacks</button>
         <button class="sheet-tab" data-panel="twitter">Twitter</button>
         <button class="sheet-tab-add">+</button>
@@ -202,14 +202,14 @@
     <!-- MAIN CONTENT AREA -->
     <!-- ============================================ -->
     <main id="main-content">
-        <!-- PANEL 1: WIRE FEED -->
-        <section class="panel" id="wire-panel">
+        <!-- PANEL 1: READING -->
+        <section class="panel" id="reading-panel">
             <header class="panel-header">
-                <h2>WIRE</h2>
-                <span class="panel-source">AP • REUTERS</span>
+                <h2>READING</h2>
+                <span class="panel-source">INSTAPAPER • GOODREADS</span>
             </header>
-            <div class="panel-content" id="wire-feed">
-                <div class="loading-indicator">Loading wire feed...</div>
+            <div class="panel-content" id="reading-feed">
+                <div class="loading-indicator">Loading reading list...</div>
             </div>
         </section>
 

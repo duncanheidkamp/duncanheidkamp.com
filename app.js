@@ -27,21 +27,25 @@ const CONFIG = {
 
     // RSS Feed Sources
     RSS_FEEDS: {
-        // Wire feeds - using rss2json API for reliability
-        wire: [
-            { name: 'AP', url: 'https://feedx.net/rss/ap.xml', source: 'ap' },
-            { name: 'Reuters', url: 'https://feedx.net/rss/reuters.xml', source: 'reuters' }
-        ],
-        // Major publications
+        // Headlines - includes wire services and major publications
         headlines: [
+            { name: 'AP', url: 'https://feedx.net/rss/ap.xml', source: 'ap' },
+            { name: 'Reuters', url: 'https://feedx.net/rss/reuters.xml', source: 'reuters' },
             { name: 'Drudge', url: 'https://feedpress.me/drudgereportfeed', source: 'drudge' },
             { name: 'NYT', url: 'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml', source: 'nyt' },
-            { name: 'WSJ', url: 'https://feeds.wsj.com/rss/RSSWorldNews.xml', source: 'wsj' },
+            { name: 'WSJ', url: 'https://feeds.content.dowjones.io/public/rss/WSJcomUSBusiness', source: 'wsj' },
+            { name: 'Bloomberg', url: 'https://feeds.bloomberg.com/markets/news.rss', source: 'bloomberg' },
+            { name: 'Money Stuff', url: 'https://www.bloomberg.com/opinion/authors/ARbTQlRLRjE/matthew-s-levine.rss', source: 'moneystuff' },
             { name: 'Atlantic', url: 'https://www.theatlantic.com/feed/all/', source: 'atlantic' },
             { name: 'Tribune', url: 'https://www.chicagotribune.com/arcio/rss/', source: 'tribune' },
             { name: 'Block Club', url: 'https://blockclubchicago.org/feed/', source: 'blockclub' },
             { name: 'Onion', url: 'https://theonion.com/feed/', source: 'onion' }
         ],
+        // Reading panel feeds
+        reading: {
+            instapaper: 'https://instapaper.com/rss/8194512/enei3iXcVSKeLjHiSxpzTLR8Ta4',
+            goodreads: 'https://www.goodreads.com/review/list_rss/56452115?key=SX0ZapaytFucPK03UJVw9dBSCdmxUZPWoWlYlJbdZUHKf-4s&shelf=currently-reading'
+        },
         // Substacks
         substacks: [
             { name: 'Slow Boring', author: 'Matt Yglesias', url: 'https://www.slowboring.com/feed', source: 'substack' },
@@ -639,61 +643,144 @@ function getChangeClass(pct) {
 }
 
 // ============================================
-// WIRE FEED
+// READING PANEL (Instapaper + Goodreads)
 // ============================================
 
-async function fetchWireFeed() {
-    const container = document.getElementById('wire-feed');
-    let allItems = [];
-    let feedsLoaded = 0;
+async function fetchReadingPanel() {
+    const container = document.getElementById('reading-feed');
 
-    for (const feed of CONFIG.RSS_FEEDS.wire) {
-        try {
-            const xml = await fetchWithProxy(feed.url);
-            const items = parseRSS(xml);
-            items.forEach(item => {
-                item.source = feed.source;
-                item.sourceName = feed.name;
-            });
-            allItems = allItems.concat(items);
-            feedsLoaded++;
-        } catch (e) {
-            console.warn(`Wire feed ${feed.name} failed:`, e);
-            updateFeedStatus(undefined, undefined, true);
-        }
-    }
+    // Fetch both feeds in parallel
+    const [instapaperItems, goodreadsItems] = await Promise.all([
+        fetchInstapaperFeed(),
+        fetchGoodreadsFeed()
+    ]);
 
-    // Sort by date
-    allItems.sort((a, b) => b.date - a.date);
-
-    // Cache
-    if (allItems.length > 0) {
-        State.cache.wire = { items: allItems.slice(0, 20), timestamp: Date.now() };
-        saveCache();
-    } else if (State.cache.wire) {
-        allItems = State.cache.wire.items;
-    }
-
-    // Render
-    renderWireFeed(container, allItems.slice(0, 20));
-    State.feedsLoaded += feedsLoaded;
+    // Render the combined panel
+    renderReadingPanel(container, goodreadsItems, instapaperItems);
+    State.feedsLoaded += 2;
     updateFeedStatus();
 }
 
-function renderWireFeed(container, items) {
-    if (items.length === 0) {
-        container.innerHTML = '<div class="feed-unavailable">WIRE FEED UNAVAILABLE</div>';
-        return;
-    }
+async function fetchInstapaperFeed() {
+    try {
+        const xml = await fetchWithProxy(CONFIG.RSS_FEEDS.reading.instapaper);
+        const items = parseRSS(xml);
 
-    container.innerHTML = items.map(item => `
-        <div class="feed-item">
-            <a href="${item.link}" target="_blank" rel="noopener">
-                <span class="feed-time">${formatTime(item.date)}</span>
-                <span class="feed-headline">${item.title}</span>
-            </a>
-        </div>
-    `).join('');
+        // Cache
+        State.cache.instapaper = { items: items.slice(0, 15), timestamp: Date.now() };
+        saveCache();
+
+        return items.slice(0, 15);
+    } catch (e) {
+        console.warn('Instapaper feed failed:', e);
+        updateFeedStatus(undefined, undefined, true);
+
+        // Return cached data if available
+        if (State.cache.instapaper) {
+            return State.cache.instapaper.items;
+        }
+        return [];
+    }
+}
+
+async function fetchGoodreadsFeed() {
+    try {
+        const xml = await fetchWithProxy(CONFIG.RSS_FEEDS.reading.goodreads);
+        const items = parseGoodreadsRSS(xml);
+
+        // Cache
+        State.cache.goodreads = { items: items, timestamp: Date.now() };
+        saveCache();
+
+        return items;
+    } catch (e) {
+        console.warn('Goodreads feed failed:', e);
+        updateFeedStatus(undefined, undefined, true);
+
+        // Return cached data if available
+        if (State.cache.goodreads) {
+            return State.cache.goodreads.items;
+        }
+        return [];
+    }
+}
+
+/**
+ * Parse Goodreads RSS which has different structure
+ */
+function parseGoodreadsRSS(xml) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xml, 'text/xml');
+
+    const items = [];
+    const entries = doc.querySelectorAll('item');
+
+    entries.forEach(entry => {
+        const title = entry.querySelector('title')?.textContent?.trim() || '';
+        const link = entry.querySelector('link')?.textContent?.trim() || '';
+        const author = entry.querySelector('author_name')?.textContent?.trim() || '';
+
+        // Try to extract book cover from description
+        const description = entry.querySelector('description')?.textContent || '';
+        const coverMatch = description.match(/src="([^"]+)"/);
+        const coverUrl = coverMatch ? coverMatch[1] : null;
+
+        if (title) {
+            items.push({
+                title: decodeHTMLEntities(title),
+                author: decodeHTMLEntities(author),
+                link: link,
+                coverUrl: coverUrl
+            });
+        }
+    });
+
+    return items;
+}
+
+function renderReadingPanel(container, books, articles) {
+    let html = '';
+
+    // Currently Reading section
+    html += '<div class="reading-section">';
+    html += '<div class="reading-section-header">📚 CURRENTLY READING</div>';
+
+    if (books.length === 0) {
+        html += '<div class="reading-empty">No books currently reading</div>';
+    } else {
+        html += books.map(book => `
+            <div class="book-item">
+                <a href="${book.link}" target="_blank" rel="noopener">
+                    ${book.coverUrl ? `<img class="book-cover" src="${book.coverUrl}" alt="${book.title}" onerror="this.style.display='none'">` : '<div class="book-cover-placeholder">📖</div>'}
+                    <div class="book-info">
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-author">by ${book.author}</div>
+                    </div>
+                </a>
+            </div>
+        `).join('');
+    }
+    html += '</div>';
+
+    // Saved Articles section
+    html += '<div class="reading-section">';
+    html += `<div class="reading-section-header">📑 SAVED ARTICLES (${articles.length})</div>`;
+
+    if (articles.length === 0) {
+        html += '<div class="reading-empty">No saved articles</div>';
+    } else {
+        html += articles.map(article => `
+            <div class="feed-item saved-article">
+                <a href="${article.link}" target="_blank" rel="noopener">
+                    <span class="feed-time">${formatRelativeTime(article.date)}</span>
+                    <span class="feed-headline">${article.title}</span>
+                </a>
+            </div>
+        `).join('');
+    }
+    html += '</div>';
+
+    container.innerHTML = html;
 }
 
 // ============================================
@@ -1102,9 +1189,8 @@ async function updateAll() {
     console.log('Refreshing all data...');
 
     State.feedsLoaded = 0;
-    State.feedsTotal = CONFIG.RSS_FEEDS.wire.length +
-                       CONFIG.RSS_FEEDS.headlines.length +
-                       CONFIG.RSS_FEEDS.substacks.length + 3; // +3 for breaking, stocks, weather
+    State.feedsTotal = CONFIG.RSS_FEEDS.headlines.length +
+                       CONFIG.RSS_FEEDS.substacks.length + 5; // +2 for reading (instapaper/goodreads), +3 for breaking, stocks, weather
     State.errors = 0;
 
     updateFeedStatus(0, State.feedsTotal);
@@ -1112,7 +1198,7 @@ async function updateAll() {
     // Parallel fetch
     await Promise.allSettled([
         fetchStockData(),
-        fetchWireFeed(),
+        fetchReadingPanel(),
         fetchHeadlinesFeed(),
         fetchSubstacksFeed(),
         fetchBreakingNews(),
