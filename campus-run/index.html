@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Campus Run: The Reunion Challenge</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen">
+        <div class="screen-content">
+            <h1 class="game-title">Campus Run</h1>
+            <h2 class="game-subtitle">The Reunion Challenge</h2>
+
+            <div class="instructions">
+                <p class="instruction-main">Collect 15 items to unlock your invitation!</p>
+                <div class="instruction-controls">
+                    <p><span class="key">SPACE</span> or <span class="key">TAP</span> to jump</p>
+                    <p>Grab bottles, footballs, trophies & mascots!</p>
+                    <p>Jump over obstacles and barriers!</p>
+                </div>
+            </div>
+
+            <button id="start-btn" class="btn btn-primary">Start Game</button>
+
+            <!-- Shows only for returning players who completed the game -->
+            <a id="skip-link" href="#" class="skip-link hidden">Already completed? Skip to Invitation</a>
+        </div>
+
+        <!-- Decorative IU elements -->
+        <div class="start-decoration">
+            <div class="sample-gates-silhouette"></div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen hidden">
+        <!-- HUD / Top Bar -->
+        <div id="hud">
+            <div class="hud-left">
+                <span class="hud-icon bottle-icon"></span>
+                <span id="bottle-count">Items: 0/15</span>
+            </div>
+            <div class="hud-center">
+                <button id="mute-btn" class="mute-btn" title="Toggle Sound">
+                    <span id="sound-icon">🔊</span>
+                </button>
+            </div>
+            <div class="hud-right">
+                <span id="distance">Distance: 0m</span>
+            </div>
+        </div>
+
+        <!-- Main Game Canvas Container -->
+        <div id="game-container">
+            <!-- Parallax Background Layers -->
+            <div id="bg-sky" class="bg-layer"></div>
+            <div id="bg-far" class="bg-layer"></div>
+            <div id="bg-mid" class="bg-layer"></div>
+            <div id="bg-near" class="bg-layer"></div>
+
+            <!-- Game Canvas for sprites and gameplay -->
+            <canvas id="game-canvas"></canvas>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div id="pause-overlay" class="overlay hidden">
+            <div class="overlay-content">
+                <h2>Paused</h2>
+                <p>Press ESC or click to resume</p>
+                <button id="resume-btn" class="btn btn-secondary">Resume</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Win Screen -->
+    <div id="win-screen" class="screen hidden">
+        <div id="confetti-container"></div>
+        <div class="screen-content win-content">
+            <div class="win-character"></div>
+            <h1 class="win-title">Congratulations!</h1>
+            <p class="win-message">You've proven yourself a true Hoosier!</p>
+
+            <div class="invitation-box">
+                <p class="code-label">Your invitation code is:</p>
+                <div class="code-display">
+                    <span id="invitation-code">HOOSIER2024</span>
+                    <button id="copy-code-btn" class="copy-btn" title="Copy Code">📋</button>
+                </div>
+                <p class="code-instruction">Enter this code at the main site</p>
+            </div>
+
+            <button id="continue-btn" class="btn btn-primary">Continue to Main Site</button>
+            <button id="play-again-btn" class="btn btn-secondary">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Audio elements (will be controlled via Web Audio API, these are fallbacks) -->
+    <div id="audio-container" style="display: none;">
+        <!-- Audio is generated programmatically via Web Audio API in game.js -->
+    </div>
+
+    <!-- Load scripts in order -->
+    <script src="assets.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

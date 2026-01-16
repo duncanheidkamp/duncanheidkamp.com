@@ -1,0 +1,701 @@
+/* ============================================
+   CAMPUS RUN: THE REUNION CHALLENGE
+   Main Stylesheet
+   ============================================ */
+
+/* === CSS Variables for easy customization === */
+:root {
+    /* IU Color Palette */
+    --iu-crimson: #990000;
+    --iu-cream: #EDEBEB;
+    --limestone: #D4C5A9;
+    --limestone-dark: #A89968;
+    --brick-red: #8B4513;
+    --grass-green: #4A7C23;
+    --grass-dark: #3D6B1C;
+    --sky-blue: #87CEEB;
+    --sky-sunset: #FFB347;
+    --sky-pink: #FFB6C1;
+
+    /* UI Colors */
+    --text-dark: #2C1810;
+    --text-light: #FFFFFF;
+    --overlay-dark: rgba(0, 0, 0, 0.7);
+    --gold-glow: #FFD700;
+
+    /* Sizing */
+    --ground-height: 100px;
+    --hud-height: 50px;
+}
+
+/* === Reset & Base Styles === */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Press Start 2P', 'Courier New', monospace;
+    background: linear-gradient(to bottom, var(--sky-blue), var(--sky-sunset));
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* Import pixel font */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+/* === Screen Containers === */
+.screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s ease;
+}
+
+.screen.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.screen-content {
+    text-align: center;
+    z-index: 10;
+    padding: 20px;
+    max-width: 500px;
+}
+
+/* === Start Screen === */
+#start-screen {
+    background: linear-gradient(
+        to bottom,
+        #87CEEB 0%,
+        #FFB347 40%,
+        #FFB6C1 60%,
+        #FFB347 80%,
+        var(--grass-green) 95%,
+        var(--grass-dark) 100%
+    );
+}
+
+.game-title {
+    font-size: 2.5rem;
+    color: var(--iu-crimson);
+    text-shadow:
+        4px 4px 0 #000,
+        -2px -2px 0 var(--iu-cream),
+        2px -2px 0 var(--iu-cream),
+        -2px 2px 0 var(--iu-cream);
+    margin-bottom: 0.3em;
+    font-weight: 800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+.game-subtitle {
+    font-size: 1.5rem;
+    color: var(--limestone-dark);
+    margin-bottom: 2rem;
+    font-weight: 400;
+    font-style: italic;
+}
+
+.instructions {
+    background: #111;
+    border: 4px solid var(--iu-crimson);
+    border-radius: 0;
+    padding: 20px 30px;
+    margin-bottom: 2rem;
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+}
+
+.instruction-main {
+    font-size: 0.9rem;
+    color: #FFD700;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    line-height: 1.8;
+}
+
+.instruction-controls p {
+    margin: 0.8rem 0;
+    color: #FFF;
+    font-size: 0.7rem;
+    line-height: 1.6;
+}
+
+.key {
+    display: inline-block;
+    background: var(--iu-crimson);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin: 0 2px;
+}
+
+/* === Buttons - 16-bit Style === */
+.btn {
+    padding: 15px 30px;
+    font-size: 0.8rem;
+    border: 4px solid #000;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-family: 'Press Start 2P', monospace;
+    position: relative;
+}
+
+.btn-primary {
+    background: var(--iu-crimson);
+    color: white;
+    box-shadow: 4px 4px 0 #000;
+}
+
+.btn-primary:hover {
+    background: #CC0000;
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 #000;
+}
+
+.btn-primary:active {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+}
+
+.btn-secondary {
+    background: var(--limestone);
+    color: var(--text-dark);
+    box-shadow: 4px 4px 0 #000;
+}
+
+.btn-secondary:hover {
+    background: var(--limestone-dark);
+    color: white;
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 #000;
+}
+
+.skip-link {
+    display: block;
+    margin-top: 1.5rem;
+    color: var(--iu-crimson);
+    text-decoration: underline;
+    font-size: 0.9rem;
+}
+
+.skip-link:hover {
+    color: #7A0000;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* === Start Screen Decoration === */
+.start-decoration {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 150px;
+    pointer-events: none;
+}
+
+.sample-gates-silhouette {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 100px;
+    opacity: 0.3;
+}
+
+/* === Game Screen === */
+#game-screen {
+    flex-direction: column;
+    background: transparent;
+}
+
+/* === HUD (Heads-Up Display) - 16-bit Style === */
+#hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--hud-height);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    background: #111;
+    border-bottom: 4px solid #333;
+    z-index: 100;
+    color: #FFD700;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-shadow: 2px 2px 0 #000;
+    font-family: 'Press Start 2P', monospace;
+}
+
+.hud-left, .hud-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hud-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.mute-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: background 0.3s;
+}
+
+.mute-btn:hover {
+    background: rgba(255,255,255,0.4);
+}
+
+.bottle-icon {
+    display: inline-block;
+    width: 20px;
+    height: 30px;
+    background: linear-gradient(to bottom, #4A3728, #6B4423);
+    border-radius: 3px 3px 5px 5px;
+    position: relative;
+}
+
+.bottle-icon::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 10px;
+    background: #4A3728;
+    border-radius: 2px 2px 0 0;
+}
+
+/* === Game Container === */
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* === Parallax Background Layers === */
+.bg-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 100%;
+    background-repeat: repeat-x;
+    background-size: auto 100%;
+}
+
+#bg-sky {
+    background: linear-gradient(
+        to bottom,
+        #87CEEB 0%,
+        #98D4EE 20%,
+        #FFB347 50%,
+        #FF8C69 70%,
+        #FFB6C1 85%,
+        #FFD700 100%
+    );
+    width: 100%;
+    z-index: 1;
+}
+
+#bg-far {
+    z-index: 2;
+    /* Buildings will be drawn via JS/SVG */
+}
+
+#bg-mid {
+    z-index: 3;
+    /* Trees and lamp posts */
+}
+
+#bg-near {
+    z-index: 4;
+    /* Grass and path */
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        transparent 75%,
+        var(--grass-green) 75%,
+        var(--grass-green) 85%,
+        #888 85%,
+        #888 90%,
+        var(--grass-green) 90%,
+        var(--grass-dark) 100%
+    );
+}
+
+#game-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+}
+
+/* === Pause Overlay === */
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--overlay-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+
+.overlay-content {
+    text-align: center;
+    color: white;
+}
+
+.overlay-content h2 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.overlay-content p {
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+/* === Win Screen === */
+#win-screen {
+    background: linear-gradient(
+        135deg,
+        var(--iu-crimson) 0%,
+        #7A0000 50%,
+        var(--iu-crimson) 100%
+    );
+}
+
+.win-content {
+    color: white;
+}
+
+.win-title {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.win-message {
+    font-size: 1.3rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+.win-character {
+    width: 100px;
+    height: 120px;
+    margin: 0 auto 20px;
+    /* Character sprite will be added via JS */
+}
+
+.invitation-box {
+    background: white;
+    border-radius: 15px;
+    padding: 25px 40px;
+    margin-bottom: 2rem;
+    color: var(--text-dark);
+}
+
+.code-label {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #666;
+}
+
+.code-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+#invitation-code {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--iu-crimson);
+    letter-spacing: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+.copy-btn {
+    background: var(--limestone);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.3s;
+}
+
+.copy-btn:hover {
+    background: var(--limestone-dark);
+    transform: scale(1.1);
+}
+
+.code-instruction {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+#win-screen .btn {
+    margin: 10px;
+}
+
+/* === Confetti Container === */
+#confetti-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 5;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: -10px;
+    animation: confetti-fall linear forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* === Collection Popup Animation === */
+.collect-popup {
+    position: absolute;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--gold-glow);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    pointer-events: none;
+    animation: popup-float 1s ease-out forwards;
+    z-index: 50;
+}
+
+@keyframes popup-float {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-50px) scale(1.5);
+        opacity: 0;
+    }
+}
+
+/* === Bottle Glow Effect === */
+.bottle-glow {
+    animation: glow-pulse 1s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+    0%, 100% {
+        filter: drop-shadow(0 0 5px var(--gold-glow));
+    }
+    50% {
+        filter: drop-shadow(0 0 15px var(--gold-glow)) drop-shadow(0 0 25px var(--gold-glow));
+    }
+}
+
+/* === Bottle Bob Animation === */
+@keyframes bottle-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+/* === Character Stumble Animation === */
+@keyframes stumble {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px) rotate(-5deg); }
+    75% { transform: translateX(5px) rotate(5deg); }
+}
+
+/* === Mobile Responsive === */
+@media (max-width: 768px) {
+    .game-title {
+        font-size: 2.5rem;
+    }
+
+    .game-subtitle {
+        font-size: 1.2rem;
+    }
+
+    .instructions {
+        padding: 15px 20px;
+        margin: 0 10px 1.5rem;
+    }
+
+    .instruction-main {
+        font-size: 1.1rem;
+    }
+
+    .btn {
+        padding: 12px 30px;
+        font-size: 1.1rem;
+    }
+
+    #hud {
+        padding: 0 10px;
+        font-size: 1rem;
+    }
+
+    .mute-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+
+    .win-title {
+        font-size: 2.2rem;
+    }
+
+    #invitation-code {
+        font-size: 1.5rem;
+    }
+
+    .invitation-box {
+        padding: 20px 25px;
+        margin: 0 10px 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-title {
+        font-size: 2rem;
+    }
+
+    .hud-center {
+        display: none;
+    }
+
+    #hud {
+        font-size: 0.9rem;
+    }
+
+    .win-title {
+        font-size: 1.8rem;
+    }
+
+    #invitation-code {
+        font-size: 1.3rem;
+        letter-spacing: 2px;
+    }
+}
+
+/* === Touch Device Optimizations === */
+@media (hover: none) and (pointer: coarse) {
+    .btn:hover {
+        transform: none;
+    }
+
+    .btn:active {
+        transform: scale(0.95);
+    }
+
+    /* Larger touch targets */
+    .mute-btn {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* === Loading State === */
+.loading {
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 3px solid var(--limestone);
+    border-top-color: var(--iu-crimson);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* === Accessibility === */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Focus styles for keyboard navigation */
+.btn:focus,
+.mute-btn:focus {
+    outline: 3px solid var(--gold-glow);
+    outline-offset: 2px;
+}

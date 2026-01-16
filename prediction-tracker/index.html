@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Tracker</title>
+
+    <!--
+    =============================================
+    PUBLIC DASHBOARD - READ ONLY
+    This page displays predictions for visitors.
+    To add/edit predictions, go to admin.html
+    =============================================
+    -->
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Supabase (cloud database) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="app">
+
+        <!-- ==================== HEADER ==================== -->
+        <header class="header">
+            <h1>Prediction Tracker</h1>
+            <p class="header-subtitle">Tracking forecasts with Brier scoring</p>
+
+            <!-- Summary stats shown in header -->
+            <div class="header-stats">
+                <div class="header-stat">
+                    <span class="header-stat-value" id="brierScore">--</span>
+                    <span class="header-stat-label">Brier Score</span>
+                </div>
+                <div class="header-stat">
+                    <span class="header-stat-value" id="totalResolved">0</span>
+                    <span class="header-stat-label">Resolved</span>
+                </div>
+                <div class="header-stat">
+                    <span class="header-stat-value" id="totalPending">0</span>
+                    <span class="header-stat-label">Pending</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ==================== NAVIGATION TABS ==================== -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="active">Active</button>
+            <button class="tab" data-tab="resolved">Resolved</button>
+            <button class="tab" data-tab="stats">Stats</button>
+            <button class="tab" data-tab="about">About</button>
+        </nav>
+
+        <!-- ==================== ACTIVE PREDICTIONS ==================== -->
+        <section class="tab-content active" id="active">
+            <div class="section-header">
+                <h2>Active Predictions</h2>
+                <p>Forecasts awaiting resolution</p>
+            </div>
+
+            <!-- Filter controls -->
+            <div class="filter-bar">
+                <select id="activeCategory" aria-label="Filter by category">
+                    <option value="all">All Categories</option>
+                    <option value="world_events">World Events</option>
+                    <option value="us_politics">U.S. Politics</option>
+                    <option value="business_finance">Business/Finance</option>
+                    <option value="sports">Sports</option>
+                    <option value="misc">Misc</option>
+                </select>
+                <select id="activeSort" aria-label="Sort by">
+                    <option value="date_asc">Resolution Date (Soonest)</option>
+                    <option value="date_desc">Resolution Date (Latest)</option>
+                    <option value="probability_high">Probability (High to Low)</option>
+                    <option value="probability_low">Probability (Low to High)</option>
+                </select>
+            </div>
+
+            <!-- Prediction cards will be inserted here -->
+            <div id="activeList" class="prediction-list"></div>
+        </section>
+
+        <!-- ==================== RESOLVED PREDICTIONS ==================== -->
+        <section class="tab-content" id="resolved">
+            <div class="section-header">
+                <h2>Resolved Predictions</h2>
+                <p>Past forecasts with outcomes</p>
+            </div>
+
+            <!-- Filter controls -->
+            <div class="filter-bar">
+                <select id="resolvedOutcome" aria-label="Filter by outcome">
+                    <option value="all">All Outcomes</option>
+                    <option value="correct">Happened (Correct)</option>
+                    <option value="incorrect">Did Not Happen</option>
+                </select>
+                <select id="resolvedCategory" aria-label="Filter by category">
+                    <option value="all">All Categories</option>
+                    <option value="world_events">World Events</option>
+                    <option value="us_politics">U.S. Politics</option>
+                    <option value="business_finance">Business/Finance</option>
+                    <option value="sports">Sports</option>
+                    <option value="misc">Misc</option>
+                </select>
+            </div>
+
+            <!-- Resolved prediction cards -->
+            <div id="resolvedList" class="prediction-list"></div>
+        </section>
+
+        <!-- ==================== STATISTICS ==================== -->
+        <section class="tab-content" id="stats">
+            <div class="section-header">
+                <h2>Forecasting Statistics</h2>
+                <p>Long-term performance metrics</p>
+            </div>
+
+            <div class="stats-grid">
+                <!-- Overall Brier Score -->
+                <div class="stat-card featured">
+                    <h3>Overall Brier Score</h3>
+                    <div class="stat-value" id="overallBrier">--</div>
+                    <p class="stat-explanation">
+                        Lower is better. 0 = perfect, 0.25 = random guessing, 1 = always wrong.
+                    </p>
+                </div>
+
+                <!-- By Category -->
+                <div class="stat-card">
+                    <h3>By Category</h3>
+                    <div id="categoryStats" class="stat-breakdown"></div>
+                </div>
+
+                <!-- Calibration -->
+                <div class="stat-card">
+                    <h3>Calibration</h3>
+                    <p class="stat-subtitle">Do my probability estimates match reality?</p>
+                    <div id="calibrationStats" class="stat-breakdown"></div>
+                </div>
+
+                <!-- Recent Performance -->
+                <div class="stat-card">
+                    <h3>Recent Performance</h3>
+                    <div id="recentStats" class="recent-results"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== ABOUT ==================== -->
+        <section class="tab-content" id="about">
+            <div class="section-header">
+                <h2>About This Tracker</h2>
+            </div>
+
+            <div class="about-content">
+                <h3>What is this?</h3>
+                <p>
+                    This is my public prediction tracker. I make forecasts about future events
+                    and assign probability percentages. When predictions resolve, they're scored
+                    using the <strong>Brier Score</strong> - a proper scoring rule that rewards
+                    well-calibrated predictions.
+                </p>
+
+                <h3>How does Brier Scoring work?</h3>
+                <p>
+                    The Brier Score measures prediction accuracy: <code>(probability - outcome)²</code>
+                </p>
+                <ul>
+                    <li><strong>If I say 80% and it happens:</strong> (0.8 - 1)² = 0.04 (good)</li>
+                    <li><strong>If I say 80% and it doesn't:</strong> (0.8 - 0)² = 0.64 (bad)</li>
+                    <li><strong>If I say 50% either way:</strong> (0.5 - outcome)² = 0.25 (baseline)</li>
+                </ul>
+                <p>
+                    A Brier Score below 0.25 means I'm doing better than random chance.
+                    The lower, the better.
+                </p>
+
+                <h3>Categories</h3>
+                <ul>
+                    <li><strong>World Events:</strong> International affairs, global trends</li>
+                    <li><strong>U.S. Politics:</strong> Elections, legislation, policy</li>
+                    <li><strong>Business/Finance:</strong> Markets, companies, economics</li>
+                    <li><strong>Sports:</strong> Games, championships, player performance</li>
+                    <li><strong>Misc:</strong> Everything else</li>
+                </ul>
+
+                <h3>Change History</h3>
+                <p>
+                    When I update a prediction's probability, the change is logged.
+                    Click any prediction to see its full history.
+                </p>
+            </div>
+        </section>
+
+        <!-- ==================== PREDICTION DETAIL MODAL ==================== -->
+        <div class="modal" id="predictionModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <button class="modal-close" aria-label="Close">&times;</button>
+                <div id="modalBody">
+                    <!-- Filled dynamically when prediction is clicked -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== FOOTER ==================== -->
+        <footer class="footer">
+            <p>
+                <a href="https://duncanheidkamp.com" target="_blank">duncanheidkamp.com</a>
+                <span style="margin: 0 8px; color: #d1d5db;">|</span>
+                <a href="admin.html" style="color: #9ca3af;">Admin</a>
+            </p>
+        </footer>
+
+    </div>
+
+    <!-- Configuration (Supabase keys) -->
+    <script src="config.js"></script>
+    <!-- Public page logic -->
+    <script src="public.js"></script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Prediction Tracker</title>
+
+    <!--
+    =============================================
+    ADMIN PAGE - PASSWORD PROTECTED
+    Add, edit, and resolve predictions here.
+    =============================================
+    -->
+
+    <!-- Styles (same as public) -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- Admin-specific styles -->
+    <link rel="stylesheet" href="admin-styles.css">
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="app">
+
+        <!-- ==================== LOGIN SCREEN ==================== -->
+        <div id="loginScreen" class="login-screen">
+            <div class="login-box">
+                <h1>Admin Login</h1>
+                <p>Enter password to manage predictions</p>
+
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required placeholder="Enter admin password">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Login</button>
+                </form>
+
+                <p class="login-error" id="loginError"></p>
+
+                <a href="index.html" class="login-back">← Back to public view</a>
+            </div>
+        </div>
+
+        <!-- ==================== ADMIN PANEL (hidden until login) ==================== -->
+        <div id="adminPanel" class="admin-panel" style="display: none;">
+
+            <!-- Header -->
+            <header class="header admin-header">
+                <div class="header-top">
+                    <h1>Admin Panel</h1>
+                    <button class="btn btn-small btn-logout" id="logoutBtn">Logout</button>
+                </div>
+                <p class="header-subtitle">Manage your predictions</p>
+            </header>
+
+            <!-- Tab Navigation -->
+            <nav class="tabs">
+                <button class="tab active" data-tab="add">+ Add New</button>
+                <button class="tab" data-tab="manage">Manage</button>
+                <button class="tab" data-tab="resolve">Resolve</button>
+            </nav>
+
+            <!-- ==================== ADD NEW PREDICTION ==================== -->
+            <section class="tab-content active" id="add">
+                <div class="section-header">
+                    <h2>Add New Prediction</h2>
+                </div>
+
+                <form id="addForm" class="prediction-form">
+                    <div class="form-group">
+                        <label for="name">Prediction Name *</label>
+                        <input type="text" id="name" required
+                               placeholder="Short, memorable title (e.g., 'Biden wins 2024')">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description *</label>
+                        <textarea id="description" required rows="3"
+                                  placeholder="Detailed explanation of what you're predicting and why"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="probability">Probability (%) *</label>
+                            <input type="number" id="probability" required
+                                   min="1" max="99" value="50"
+                                   placeholder="1-99">
+                            <small class="form-help">Your confidence this will happen (1-99%)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category">Category *</label>
+                            <select id="category" required>
+                                <option value="">Select category...</option>
+                                <option value="world_events">World Events</option>
+                                <option value="us_politics">U.S. Politics</option>
+                                <option value="business_finance">Business/Finance</option>
+                                <option value="sports">Sports</option>
+                                <option value="misc">Misc</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="resolutionDate">Resolution Date *</label>
+                        <input type="date" id="resolutionDate" required>
+                        <small class="form-help">When will we know the outcome?</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full">
+                        Add Prediction
+                    </button>
+                </form>
+            </section>
+
+            <!-- ==================== MANAGE PREDICTIONS ==================== -->
+            <section class="tab-content" id="manage">
+                <div class="section-header">
+                    <h2>Manage Predictions</h2>
+                    <p>Edit or delete existing predictions</p>
+                </div>
+
+                <div class="filter-bar">
+                    <select id="manageFilter">
+                        <option value="active">Active Only</option>
+                        <option value="resolved">Resolved Only</option>
+                        <option value="all">All Predictions</option>
+                    </select>
+                </div>
+
+                <div id="manageList" class="prediction-list"></div>
+            </section>
+
+            <!-- ==================== RESOLVE PREDICTIONS ==================== -->
+            <section class="tab-content" id="resolve">
+                <div class="section-header">
+                    <h2>Resolve Predictions</h2>
+                    <p>Mark predictions as happened or did not happen</p>
+                </div>
+
+                <div id="resolveList" class="prediction-list"></div>
+            </section>
+
+        </div>
+
+        <!-- ==================== EDIT MODAL ==================== -->
+        <div class="modal" id="editModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <button class="modal-close" aria-label="Close">&times;</button>
+                <div id="editModalBody">
+                    <h2 class="modal-title">Edit Prediction</h2>
+
+                    <form id="editForm" class="prediction-form">
+                        <input type="hidden" id="editId">
+
+                        <div class="form-group">
+                            <label for="editName">Prediction Name</label>
+                            <input type="text" id="editName" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editDescription">Description</label>
+                            <textarea id="editDescription" required rows="3"></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editProbability">Probability (%)</label>
+                                <input type="number" id="editProbability" required min="1" max="99">
+                                <small class="form-help">Changes are logged in history</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="editCategory">Category</label>
+                                <select id="editCategory" required>
+                                    <option value="world_events">World Events</option>
+                                    <option value="us_politics">U.S. Politics</option>
+                                    <option value="business_finance">Business/Finance</option>
+                                    <option value="sports">Sports</option>
+                                    <option value="misc">Misc</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editResolutionDate">Resolution Date</label>
+                            <input type="date" id="editResolutionDate" required>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== RESOLVE MODAL ==================== -->
+        <div class="modal" id="resolveModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <button class="modal-close" aria-label="Close">&times;</button>
+                <div id="resolveModalBody">
+                    <h2 class="modal-title">Resolve Prediction</h2>
+                    <p id="resolveModalName" class="modal-description"></p>
+
+                    <p style="margin-bottom: 16px;">Did this prediction happen?</p>
+
+                    <input type="hidden" id="resolveId">
+
+                    <div class="resolve-buttons">
+                        <button class="btn btn-success btn-large" onclick="resolvePrediction(true)">
+                            Yes, it happened
+                        </button>
+                        <button class="btn btn-danger btn-large" onclick="resolvePrediction(false)">
+                            No, it did not happen
+                        </button>
+                    </div>
+
+                    <button class="btn btn-secondary btn-full" style="margin-top: 16px;" onclick="closeResolveModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Configuration -->
+    <script src="config.js"></script>
+    <!-- Admin logic -->
+    <script src="admin.js"></script>
+</body>
+</html>
