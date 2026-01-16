@@ -707,13 +707,14 @@ function initTwitterTabs() {
 
 function loadTwitterTimeline(account) {
     const container = document.getElementById('twitter-container');
+    const height = window.innerHeight - 150; // Full viewport minus header elements
 
     // Create Twitter timeline embed
     container.innerHTML = `
         <a class="twitter-timeline"
            data-theme="${State.theme}"
            data-chrome="noheader nofooter noborders transparent"
-           data-height="100%"
+           data-height="${height}"
            href="https://twitter.com/${account}">
             Loading @${account}...
         </a>
