@@ -2,10 +2,277 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=/news-dashboard/">
-    <title>Redirecting...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <p>Redirecting to <a href="/news-dashboard/">News Dashboard</a>...</p>
+    <!-- ============================================ -->
+    <!-- EXCEL THEME UI ELEMENTS (Hidden by default) -->
+    <!-- ============================================ -->
+
+    <!-- Excel Title Bar -->
+    <div class="excel-title-bar">
+        <div class="excel-icon">X</div>
+        <div class="excel-title">Dashboard.xlsx - Excel</div>
+        <div class="excel-window-controls">
+            <span>—</span>
+            <span>☐</span>
+            <span>✕</span>
+        </div>
+    </div>
+
+    <!-- Excel Ribbon -->
+    <div class="excel-ribbon">
+        <div class="ribbon-tabs">
+            <button class="ribbon-tab">File</button>
+            <button class="ribbon-tab active">Home</button>
+            <button class="ribbon-tab">View</button>
+            <button class="ribbon-tab">Data</button>
+            <button class="ribbon-tab">Feeds</button>
+        </div>
+        <div class="ribbon-content">
+            <div class="ribbon-group">
+                <div class="ribbon-buttons">
+                    <button class="ribbon-btn" onclick="updateAll()" title="Refresh all feeds">
+                        <span class="ribbon-btn-icon">🔄</span>
+                        <span>Refresh</span>
+                    </button>
+                    <button class="ribbon-btn" onclick="toggleTheme()" title="Switch theme">
+                        <span class="ribbon-btn-icon">◐</span>
+                        <span>Theme</span>
+                    </button>
+                </div>
+                <div class="ribbon-group-label">Actions</div>
+            </div>
+            <div class="ribbon-group">
+                <div class="ribbon-buttons">
+                    <button class="ribbon-btn" onclick="document.getElementById('wire-panel').scrollIntoView()">
+                        <span class="ribbon-btn-icon">📰</span>
+                        <span>Wire</span>
+                    </button>
+                    <button class="ribbon-btn" onclick="document.getElementById('headlines-panel').scrollIntoView()">
+                        <span class="ribbon-btn-icon">📋</span>
+                        <span>Headlines</span>
+                    </button>
+                    <button class="ribbon-btn" onclick="document.getElementById('substacks-panel').scrollIntoView()">
+                        <span class="ribbon-btn-icon">📝</span>
+                        <span>Substacks</span>
+                    </button>
+                </div>
+                <div class="ribbon-group-label">Feeds</div>
+            </div>
+            <div class="ribbon-group">
+                <div class="ribbon-buttons" id="excel-stocks">
+                    <div class="ribbon-btn stock-positive" id="excel-sp500">
+                        <span class="ribbon-btn-icon" style="color: #006600;">▲</span>
+                        <span>S&P ---</span>
+                    </div>
+                    <div class="ribbon-btn stock-positive" id="excel-dow">
+                        <span class="ribbon-btn-icon" style="color: #006600;">▲</span>
+                        <span>DOW ---</span>
+                    </div>
+                    <div class="ribbon-btn stock-positive" id="excel-btc">
+                        <span class="ribbon-btn-icon" style="color: #006600;">▲</span>
+                        <span>BTC ---</span>
+                    </div>
+                </div>
+                <div class="ribbon-group-label">Markets</div>
+            </div>
+            <div class="ribbon-group">
+                <div class="ribbon-buttons">
+                    <div class="ribbon-btn" id="excel-congress">
+                        <span class="ribbon-btn-icon">🏛️</span>
+                        <span style="color: #006600;">IN SESSION</span>
+                    </div>
+                    <div class="ribbon-btn" id="excel-weather">
+                        <span class="ribbon-btn-icon">🌤️</span>
+                        <span>NO ALERTS</span>
+                    </div>
+                </div>
+                <div class="ribbon-group-label">Status</div>
+            </div>
+            <div class="ribbon-group">
+                <div class="ribbon-buttons">
+                    <div class="ribbon-btn">
+                        <span class="ribbon-btn-icon" id="excel-clock">--:--</span>
+                        <span id="excel-updated">Updated: --:--</span>
+                    </div>
+                </div>
+                <div class="ribbon-group-label">Time</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Formula Bar -->
+    <div class="excel-formula-bar">
+        <div class="formula-cell-ref">A1</div>
+        <div class="formula-input">
+            <span class="formula-fx">fx</span>
+            <span class="formula-text" id="formula-text">Select an article to view</span>
+        </div>
+    </div>
+
+    <!-- Excel Sheet Tabs (at bottom, positioned via CSS grid) -->
+    <div class="excel-sheet-tabs">
+        <button class="sheet-tab active" data-panel="headlines">Headlines</button>
+        <button class="sheet-tab" data-panel="wire">Wire</button>
+        <button class="sheet-tab" data-panel="substacks">Substacks</button>
+        <button class="sheet-tab" data-panel="twitter">Twitter</button>
+        <button class="sheet-tab-add">+</button>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- TOP TICKER BAR -->
+    <!-- ============================================ -->
+    <header id="ticker-bar">
+        <div class="ticker-left">
+            <div class="ticker-segment indices">
+                <span class="ticker-item" id="sp500">
+                    <span class="ticker-label">S&P</span>
+                    <span class="ticker-value">---</span>
+                    <span class="ticker-change">--%</span>
+                </span>
+                <span class="ticker-item" id="nasdaq">
+                    <span class="ticker-label">NASDAQ</span>
+                    <span class="ticker-value">---</span>
+                    <span class="ticker-change">--%</span>
+                </span>
+                <span class="ticker-item" id="dow">
+                    <span class="ticker-label">DOW</span>
+                    <span class="ticker-value">---</span>
+                    <span class="ticker-change">--%</span>
+                </span>
+            </div>
+            <div class="ticker-divider">│</div>
+            <div class="ticker-segment stocks" id="stocks-ticker">
+                <!-- Populated by JS -->
+            </div>
+            <div class="ticker-divider">│</div>
+            <div class="ticker-segment commodities">
+                <span class="ticker-item" id="btc">
+                    <span class="ticker-label">BTC</span>
+                    <span class="ticker-value">---</span>
+                    <span class="ticker-change">--%</span>
+                </span>
+                <span class="ticker-item" id="oil">
+                    <span class="ticker-label">WTI</span>
+                    <span class="ticker-value">---</span>
+                    <span class="ticker-change">--%</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="ticker-right">
+            <div class="ticker-segment status-items">
+                <span class="status-item" id="congress-status">
+                    <span class="status-label">CONGRESS:</span>
+                    <span class="status-value">LOADING...</span>
+                </span>
+                <span class="status-item" id="weather-alert">
+                    <span class="status-label">CHI WEATHER:</span>
+                    <span class="status-value">LOADING...</span>
+                </span>
+            </div>
+            <div class="ticker-divider">│</div>
+            <div class="ticker-segment sports" id="sports-ticker">
+                <!-- Populated by JS -->
+            </div>
+            <div class="ticker-divider">│</div>
+            <div class="header-controls">
+                <span id="last-updated">Updated: --:--</span>
+                <button id="theme-toggle" title="Toggle Light/Dark Mode">◐</button>
+                <span id="clock">--:--:--</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============================================ -->
+    <!-- BREAKING NEWS BAR -->
+    <!-- ============================================ -->
+    <div id="breaking-bar">
+        <span class="breaking-label">▶ BREAKING</span>
+        <span id="breaking-headline">Loading top story...</span>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MAIN CONTENT AREA -->
+    <!-- ============================================ -->
+    <main id="main-content">
+        <!-- PANEL 1: WIRE FEED -->
+        <section class="panel" id="wire-panel">
+            <header class="panel-header">
+                <h2>WIRE</h2>
+                <span class="panel-source">AP • REUTERS</span>
+            </header>
+            <div class="panel-content" id="wire-feed">
+                <div class="loading-indicator">Loading wire feed...</div>
+            </div>
+        </section>
+
+        <!-- PANEL 2: HEADLINES -->
+        <section class="panel" id="headlines-panel">
+            <header class="panel-header">
+                <h2>HEADLINES</h2>
+                <span class="panel-source">MULTI-SOURCE</span>
+            </header>
+            <div class="panel-content" id="headlines-feed">
+                <div class="loading-indicator">Loading headlines...</div>
+            </div>
+        </section>
+
+        <!-- PANEL 3: SUBSTACKS -->
+        <section class="panel" id="substacks-panel">
+            <header class="panel-header">
+                <h2>SUBSTACKS</h2>
+                <span class="panel-source">ANALYSIS</span>
+            </header>
+            <div class="panel-content" id="substacks-feed">
+                <div class="loading-indicator">Loading substacks...</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ============================================ -->
+    <!-- TWITTER/X SIDEBAR -->
+    <!-- ============================================ -->
+    <aside id="twitter-sidebar">
+        <header class="panel-header">
+            <h2>X / TWITTER</h2>
+            <div class="twitter-tabs">
+                <button class="twitter-tab active" data-account="AP">@AP</button>
+                <button class="twitter-tab" data-account="Reuters">@Reuters</button>
+                <button class="twitter-tab" data-account="BNONews">@BNO</button>
+                <button class="twitter-tab" data-account="NWSChicago">@NWSChi</button>
+            </div>
+        </header>
+        <div class="twitter-embed-container" id="twitter-container">
+            <div class="twitter-placeholder">
+                <p>Twitter embeds require JavaScript widgets.</p>
+                <p>Visit: <a href="https://twitter.com/AP" target="_blank">@AP</a></p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ============================================ -->
+    <!-- STATUS BAR (BOTTOM) -->
+    <!-- ============================================ -->
+    <footer id="status-bar">
+        <span class="status-left">
+            <span id="connection-status" class="status-ok">● CONNECTED</span>
+            <span id="feed-status">Feeds: <span id="feeds-loaded">0</span>/<span id="feeds-total">0</span></span>
+        </span>
+        <span class="status-center">
+            DASHBOARD TERMINAL v1.0 | Data refreshes every 60s
+        </span>
+        <span class="status-right">
+            <span id="errors-count">Errors: 0</span>
+        </span>
+    </footer>
+
+    <script src="app.js"></script>
 </body>
 </html>
