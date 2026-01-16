@@ -15,8 +15,8 @@ const CONFIG = {
 
     // Instapaper credentials (for auto-save)
     // Leave INSTAPAPER_USERNAME empty to disable
-    INSTAPAPER_USERNAME: '',  // Your Instapaper email/username
-    INSTAPAPER_PASSWORD: '',  // Your password (or leave empty if no password set)
+    INSTAPAPER_USERNAME: 'duncan.heidkamp@gmail.com',
+    INSTAPAPER_PASSWORD: 'dc062400',
 
     // CORS Proxy options (try multiple if one fails)
     CORS_PROXIES: [
@@ -48,7 +48,11 @@ const CONFIG = {
             { name: 'Noahpinion', author: 'Noah Smith', url: 'https://www.noahpinion.blog/feed', source: 'substack' },
             { name: 'BIG', author: 'Matt Stoller', url: 'https://www.thebignewsletter.com/feed', source: 'substack' },
             { name: 'Very Serious', author: 'Josh Barro', url: 'https://www.joshbarro.com/feed', source: 'substack' },
-            { name: 'I Might Be Wrong', author: 'Kyla Scanlon', url: 'https://kyla.substack.com/feed', source: 'substack' }
+            { name: 'I Might Be Wrong', author: 'Jeff Maurer', url: 'https://www.imightbewrong.org/feed', source: 'substack' },
+            { name: "Kyla's Newsletter", author: 'Kyla Scanlon', url: 'https://kyla.substack.com/feed', source: 'substack' },
+            { name: 'The Argument', author: 'Jerusalem Demsas', url: 'https://www.theargumentmag.com/feed', source: 'substack' },
+            { name: 'Silver Bulletin', author: 'Nate Silver', url: 'https://www.natesilver.net/feed', source: 'substack' },
+            { name: 'A City That Works', author: 'Conor Durkin', url: 'https://citythatworks.substack.com/feed', source: 'substack' }
         ]
     },
 
