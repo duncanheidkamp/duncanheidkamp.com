@@ -108,7 +108,6 @@ const State = {
     signals: [],
     sweepDelta: null,
     lastSeen: localStorage.getItem('last-seen') || null,
-    journalEntries: [],
     predictions: null,
     bootComplete: sessionStorage.getItem('boot-complete') === 'true',
     secondaryOpen: false,
@@ -124,7 +123,6 @@ const BOOT_LINES = [
     { text: 'RSS SOURCES (11)', status: 'pending' },
     { text: 'FRED INDICATORS', status: 'pending' },
     { text: 'ENERGY DATA', status: 'pending' },
-    { text: 'SUPABASE SYNC', status: 'pending' },
     { text: 'WEATHER SERVICE', status: 'pending' },
     { text: 'SPORTS FEED', status: 'pending' },
     { text: 'PREDICTIONS DB', status: 'pending' },
@@ -202,7 +200,7 @@ function initDashboard() {
     initTheme();
     initClock();
     initSecondaryNav();
-    initJournalInput();
+    initPredictionInput();
     checkDailyReset();
     updateAll();
     setInterval(updateAll, CONFIG.REFRESH_INTERVAL);
@@ -230,18 +228,11 @@ function updateAll() {
         fetchRiskGauges();
         fetchSweepDelta();
         fetchPredictions();
-        fetchJournalEntries();
     } else {
         // Fallback: direct API calls for risk gauges
         fetchRiskGaugesDirect();
         renderSweepDeltaLocal();
         fetchPredictionsDirect();
-        // Use Supabase directly if configured, otherwise localStorage
-        if (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
-            fetchJournalFromSupabase();
-        } else {
-            loadJournalFromLocalStorage();
-        }
     }
 
     // Update signals
@@ -1431,148 +1422,86 @@ function renderPredictionsPlaceholder() {
 }
 
 // ============================================
-// QUICK JOURNAL (localStorage fallback)
+// PREDICTION INPUT
 // ============================================
 
-function initJournalInput() {
-    const input = document.getElementById('journal-input');
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            submitJournalEntry();
-        }
-    });
+function initPredictionInput() {
+    const nameInput = document.getElementById('pred-input-name');
+    if (nameInput) {
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                submitPrediction();
+            }
+        });
+    }
+    // Default the date input to 30 days from now
+    const dateInput = document.getElementById('pred-input-date');
+    if (dateInput && !dateInput.value) {
+        const d = new Date();
+        d.setDate(d.getDate() + 30);
+        dateInput.value = d.toISOString().split('T')[0];
+    }
 }
 
-function submitJournalEntry() {
-    const input = document.getElementById('journal-input');
-    const category = document.getElementById('journal-category').value;
-    const content = input.value.trim();
+async function submitPrediction() {
+    const name = document.getElementById('pred-input-name').value.trim();
+    const description = document.getElementById('pred-input-desc').value.trim();
+    const probability = parseInt(document.getElementById('pred-input-prob').value);
+    const resolution_date = document.getElementById('pred-input-date').value;
+    const category = document.getElementById('pred-input-category').value;
 
-    if (!content) return;
+    if (!name) { showNotification('Prediction name is required', 'error'); return; }
+    if (!probability || probability < 1 || probability > 99) { showNotification('Probability must be 1-99%', 'error'); return; }
+    if (!resolution_date) { showNotification('Resolution date is required', 'error'); return; }
 
-    const entry = {
-        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        content,
+    const prediction = {
+        name,
+        description: description || name,
+        probability,
         category,
-        created_at: new Date().toISOString()
+        resolution_date
     };
 
-    // Save to Supabase if configured, otherwise localStorage
-    if (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
-        saveJournalToSupabase(entry);
-    } else if (CONFIG.BACKEND_URL) {
-        saveJournalToBackend(entry);
-    } else {
-        saveJournalToLocalStorage(entry);
-    }
+    const btn = document.getElementById('pred-submit');
+    btn.textContent = '...';
+    btn.disabled = true;
 
-    input.value = '';
-    showNotification('Idea saved!', 'success');
-}
-
-async function saveJournalToSupabase(entry) {
     try {
-        const response = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/journal_entries`, {
+        const response = await fetch(`${CONFIG.PREDICTIONS_SUPABASE_URL}/rest/v1/predictions`, {
             method: 'POST',
             headers: {
-                'apikey': CONFIG.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+                'apikey': CONFIG.PREDICTIONS_SUPABASE_KEY,
+                'Authorization': `Bearer ${CONFIG.PREDICTIONS_SUPABASE_KEY}`,
                 'Content-Type': 'application/json',
                 'Prefer': 'return=representation'
             },
-            body: JSON.stringify({ content: entry.content, category: entry.category })
+            body: JSON.stringify(prediction)
         });
+
         if (response.ok) {
-            fetchJournalFromSupabase();
+            // Clear inputs
+            document.getElementById('pred-input-name').value = '';
+            document.getElementById('pred-input-desc').value = '';
+            document.getElementById('pred-input-prob').value = '';
+            document.getElementById('pred-input-category').value = 'misc';
+            // Reset date to 30 days out
+            const d = new Date();
+            d.setDate(d.getDate() + 30);
+            document.getElementById('pred-input-date').value = d.toISOString().split('T')[0];
+
+            showNotification('Prediction added!', 'success');
+            // Refresh predictions display
+            fetchPredictionsDirect();
         } else {
-            saveJournalToLocalStorage(entry);
+            const err = await response.json();
+            showNotification(`Failed: ${err.message || 'Unknown error'}`, 'error');
         }
     } catch (e) {
-        saveJournalToLocalStorage(entry);
+        showNotification(`Error: ${e.message}`, 'error');
+    } finally {
+        btn.textContent = 'ADD';
+        btn.disabled = false;
     }
-}
-
-async function fetchJournalFromSupabase() {
-    try {
-        const response = await fetch(
-            `${CONFIG.SUPABASE_URL}/rest/v1/journal_entries?select=*&order=created_at.desc&limit=100`,
-            {
-                headers: {
-                    'apikey': CONFIG.SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`
-                }
-            }
-        );
-        const entries = await response.json();
-        if (Array.isArray(entries)) {
-            State.journalEntries = entries;
-            renderJournalRecent(entries);
-            updateSensor('supabase', 'ok', entries.length);
-        }
-    } catch (e) {
-        loadJournalFromLocalStorage();
-    }
-}
-
-function saveJournalToLocalStorage(entry) {
-    const entries = JSON.parse(localStorage.getItem('journal-entries') || '[]');
-    entries.unshift(entry);
-    localStorage.setItem('journal-entries', JSON.stringify(entries));
-    State.journalEntries = entries;
-    renderJournalRecent(entries);
-}
-
-function loadJournalFromLocalStorage() {
-    const entries = JSON.parse(localStorage.getItem('journal-entries') || '[]');
-    State.journalEntries = entries;
-    renderJournalRecent(entries);
-    updateSensor('supabase', entries.length > 0 ? 'ok' : 'warn', entries.length);
-}
-
-async function saveJournalToBackend(entry) {
-    try {
-        await fetch(`${CONFIG.BACKEND_URL}/api/journal/entries`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(entry)
-        });
-        fetchJournalEntries();
-    } catch (e) {
-        saveJournalToLocalStorage(entry);
-    }
-}
-
-async function fetchJournalEntries() {
-    try {
-        const response = await fetch(`${CONFIG.BACKEND_URL}/api/journal/entries`);
-        const data = await response.json();
-        State.journalEntries = data.entries || [];
-        renderJournalRecent(State.journalEntries);
-        updateSensor('supabase', 'ok', State.journalEntries.length);
-    } catch (e) {
-        loadJournalFromLocalStorage();
-    }
-}
-
-function renderJournalRecent(entries) {
-    const container = document.getElementById('journal-recent');
-    const count = document.getElementById('journal-count');
-    count.textContent = entries.length;
-
-    if (entries.length === 0) {
-        container.innerHTML = '<div class="loading-indicator" style="font-style: normal; padding: 8px;">No entries yet</div>';
-        return;
-    }
-
-    container.innerHTML = entries.slice(0, 8).map(e => `
-        <div class="journal-entry">
-            <div class="journal-entry-meta">
-                <span class="journal-entry-category ${e.category}">${e.category}</span>
-                <span>${formatRelativeTime(new Date(e.created_at))}</span>
-            </div>
-            <div class="journal-entry-text">${e.content}</div>
-        </div>
-    `).join('');
 }
 
 // ============================================
