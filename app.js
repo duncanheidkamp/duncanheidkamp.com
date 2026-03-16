@@ -201,6 +201,7 @@ function initDashboard() {
     initClock();
     initSecondaryNav();
     initPredictionInput();
+    initMap();
     checkDailyReset();
     updateAll();
     setInterval(updateAll, CONFIG.REFRESH_INTERVAL);
@@ -694,7 +695,7 @@ function getChangeClass(pct) {
 // ============================================
 
 async function fetchHeadlinesFeed() {
-    const container = document.getElementById('headlines-feed');
+    const container = document.getElementById('combined-feed');
     let newItems = [];
     let feedsLoaded = 0;
 
@@ -724,10 +725,10 @@ async function fetchHeadlinesFeed() {
     State.dailyHeadlines.sort((a, b) => new Date(b.date) - new Date(a.date));
     localStorage.setItem('daily-headlines', JSON.stringify(State.dailyHeadlines));
 
-    renderHeadlinesFeed(container, State.dailyHeadlines);
     State.feedsLoaded += feedsLoaded;
     updateSensor('feeds', feedsLoaded > 0 ? 'ok' : 'error', feedsLoaded);
     updateFeedStatus();
+    renderCombinedFeed();
 }
 
 function renderHeadlinesFeed(container, items) {
@@ -764,7 +765,7 @@ function renderHeadlinesFeed(container, items) {
 // ============================================
 
 async function fetchSubstacksFeed() {
-    const container = document.getElementById('substacks-feed');
+    const container = document.getElementById('combined-feed');
     let newItems = [];
     let feedsLoaded = 0;
 
@@ -794,9 +795,9 @@ async function fetchSubstacksFeed() {
     State.dailySubstacks.sort((a, b) => new Date(b.date) - new Date(a.date));
     localStorage.setItem('daily-substacks', JSON.stringify(State.dailySubstacks));
 
-    renderSubstacksFeed(container, State.dailySubstacks);
     State.feedsLoaded += feedsLoaded;
     updateFeedStatus();
+    renderCombinedFeed();
 }
 
 function renderSubstacksFeed(container, items) {
@@ -828,6 +829,141 @@ function renderSubstacksFeed(container, items) {
             </div>
         `;
     }).join('');
+}
+
+// ============================================
+// COMBINED FEED RENDERER
+// ============================================
+
+let activeFeedTab = 'all';
+
+function switchFeedTab(tab) {
+    activeFeedTab = tab;
+    document.querySelectorAll('.feed-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.feed === tab);
+    });
+    renderCombinedFeed();
+}
+
+function renderCombinedFeed() {
+    const container = document.getElementById('combined-feed');
+    if (!container) return;
+
+    let items = [];
+    if (activeFeedTab === 'all' || activeFeedTab === 'headlines') {
+        items = items.concat(State.dailyHeadlines.map(i => ({ ...i, feedType: 'headline' })));
+    }
+    if (activeFeedTab === 'all' || activeFeedTab === 'substacks') {
+        items = items.concat(State.dailySubstacks.map(i => ({ ...i, feedType: 'substack' })));
+    }
+
+    items.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (items.length === 0) {
+        container.innerHTML = '<div class="loading-indicator">Loading feeds...</div>';
+        return;
+    }
+
+    const unreadCount = items.filter(item => !State.readItems[item.id]).length;
+
+    container.innerHTML = `
+        <div class="feed-stats">
+            <span class="unread-count">${unreadCount} unread</span>
+            <span class="total-count">${items.length} total today</span>
+        </div>
+    ` + items.map(item => {
+        const isRead = State.readItems[item.id];
+        const escapedTitle = item.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const escapedLink = item.link.replace(/'/g, "\\'");
+
+        if (item.feedType === 'substack') {
+            return `
+                <div class="feed-item substack-combined ${isRead ? 'read' : ''}" data-item-id="${item.id}">
+                    <a href="${item.link}" target="_blank" rel="noopener" onclick="markAsRead('${item.id}', '${escapedLink}', '${escapedTitle}')">
+                        <span class="feed-source source-substack">${item.author || item.sourceName}</span>
+                        <span class="feed-headline">${item.title}</span>
+                        <span class="feed-time">${formatRelativeTime(new Date(item.date))}</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="feed-item ${isRead ? 'read' : ''}" data-item-id="${item.id}">
+                <a href="${item.link}" target="_blank" rel="noopener" onclick="markAsRead('${item.id}', '${escapedLink}', '${escapedTitle}')">
+                    <span class="feed-source source-${item.source}">${item.sourceName}</span>
+                    <span class="feed-headline">${item.title}</span>
+                    <span class="feed-time">${formatRelativeTime(new Date(item.date))}</span>
+                </a>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============================================
+// LIVE MAP (VesselFinder)
+// ============================================
+
+const MAP_PRESETS = {
+    hormuz: { lat: '26.56', lon: '56.25', zoom: '9', label: 'STRAIT OF HORMUZ — VESSEL TRAFFIC' },
+    suez:   { lat: '30.45', lon: '32.35', zoom: '10', label: 'SUEZ CANAL — VESSEL TRAFFIC' },
+    global: { lat: '20',    lon: '30',    zoom: '3',  label: 'GLOBAL MARITIME — VESSEL TRAFFIC' }
+};
+
+let currentMap = 'hormuz';
+
+function initMap() {
+    loadMap(MAP_PRESETS[currentMap]);
+}
+
+function switchMap(preset) {
+    if (!MAP_PRESETS[preset]) return;
+    currentMap = preset;
+    document.querySelectorAll('.map-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.map === preset);
+    });
+    document.getElementById('map-context').textContent = MAP_PRESETS[preset].label;
+    loadMap(MAP_PRESETS[preset]);
+}
+
+function loadMap(config) {
+    const container = document.getElementById('map-container');
+    // Clear previous embed
+    container.innerHTML = '<div class="map-loading" id="map-loading">LOADING VESSEL DATA...</div>';
+
+    // VesselFinder uses a JS-based embed — we create a sandboxed iframe with inline script
+    const iframe = document.createElement('iframe');
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = 'none';
+    iframe.setAttribute('loading', 'lazy');
+    iframe.setAttribute('title', 'Live vessel map');
+
+    // Build the embed HTML that goes inside the iframe
+    const embedHTML = `<!DOCTYPE html>
+<html><head><style>body{margin:0;overflow:hidden;background:#0a0f1a;}</style></head>
+<body>
+<script type="text/javascript">
+var width="100%";var height="100%";
+var latitude="${config.lat}";var longitude="${config.lon}";
+var zoom="${config.zoom}";var names=true;var mmsi=0;var show_track=0;
+</script>
+<script type="text/javascript" src="https://www.vesselfinder.com/aismap.js"><\/script>
+</body></html>`;
+
+    container.appendChild(iframe);
+
+    // Write embed into iframe
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(embedHTML);
+    doc.close();
+
+    // Hide loading text once iframe is ready
+    iframe.onload = () => {
+        const loading = document.getElementById('map-loading');
+        if (loading) loading.style.display = 'none';
+    };
 }
 
 // ============================================

@@ -371,25 +371,39 @@
             </section>
         </aside>
 
-        <!-- CENTER: Headlines + Substacks -->
+        <!-- CENTER: Map + Combined Feed -->
         <div id="center-content">
-            <section class="panel" id="headlines-panel">
-                <header class="panel-header">
-                    <h2>HEADLINES</h2>
-                    <span class="panel-source">MULTI-SOURCE</span>
+            <!-- LIVE MAP -->
+            <section id="map-section">
+                <header class="map-header">
+                    <div class="map-header-left">
+                        <h2>LIVE MAP</h2>
+                        <span class="map-context" id="map-context">STRAIT OF HORMUZ — VESSEL TRAFFIC</span>
+                    </div>
+                    <div class="map-controls">
+                        <button class="map-btn active" data-map="hormuz" onclick="switchMap('hormuz')">Hormuz</button>
+                        <button class="map-btn" data-map="suez" onclick="switchMap('suez')">Suez</button>
+                        <button class="map-btn" data-map="global" onclick="switchMap('global')">Global</button>
+                    </div>
                 </header>
-                <div class="panel-content" id="headlines-feed">
-                    <div class="loading-indicator">Loading headlines...</div>
+                <div class="map-container" id="map-container">
+                    <!-- VesselFinder embed injected by JS -->
+                    <div class="map-loading" id="map-loading">LOADING VESSEL DATA...</div>
                 </div>
             </section>
 
-            <section class="panel" id="substacks-panel">
+            <!-- COMBINED FEED -->
+            <section class="panel" id="feed-panel">
                 <header class="panel-header">
-                    <h2>SUBSTACKS</h2>
-                    <span class="panel-source">ANALYSIS</span>
+                    <h2>INTEL FEED</h2>
+                    <div class="feed-tab-controls">
+                        <button class="feed-tab active" data-feed="all" onclick="switchFeedTab('all')">ALL</button>
+                        <button class="feed-tab" data-feed="headlines" onclick="switchFeedTab('headlines')">NEWS</button>
+                        <button class="feed-tab" data-feed="substacks" onclick="switchFeedTab('substacks')">ANALYSIS</button>
+                    </div>
                 </header>
-                <div class="panel-content" id="substacks-feed">
-                    <div class="loading-indicator">Loading substacks...</div>
+                <div class="panel-content" id="combined-feed">
+                    <div class="loading-indicator">Loading feeds...</div>
                 </div>
             </section>
         </div>
