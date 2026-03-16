@@ -1,7 +1,7 @@
 /**
  * ============================================
- * NEWS DASHBOARD - TERMINAL STYLE
- * Main Application Logic
+ * DUNCAN'S DASHBOARD v2.0
+ * Personal Intelligence Terminal
  * ============================================
  */
 
@@ -10,18 +10,18 @@
 // ============================================
 
 const CONFIG = {
-    // Refresh interval in milliseconds
     REFRESH_INTERVAL: 60000,
+    BACKEND_URL: '', // Set to your Vercel backend URL when deployed, e.g. 'https://duncans-dashboard-api.vercel.app'
 
-    // Finnhub API key (free at finnhub.io)
-    FINNHUB_API_KEY: 'd5l7fp9r01qgqufkp040d5l7fp9r01qgqufkp04g',
+    // Supabase (new dashboard project)
+    SUPABASE_URL: 'https://xymzjlzkitciequnggkz.supabase.co',
+    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5bXpqbHpraXRjaWVxdW5nZ2t6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2MjkzNDEsImV4cCI6MjA4OTIwNTM0MX0.b_lq6LU-SnUYxS-vVs8Z8rKzvcO_8Z6iyv2E8f4w0uI',
 
-    // Instapaper credentials (for auto-save)
-    // Leave INSTAPAPER_USERNAME empty to disable
-    INSTAPAPER_USERNAME: 'duncan.heidkamp@gmail.com',
-    INSTAPAPER_PASSWORD: 'dc062400',
+    // Supabase (existing prediction tracker)
+    PREDICTIONS_SUPABASE_URL: 'https://lrkjmpsbrsmqajeyyyoe.supabase.co',
+    PREDICTIONS_SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxya2ptcHNicnNtcWFqZXl5eW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MjIzMzYsImV4cCI6MjA4Mzk5ODMzNn0.3KY0yuqaCShgk3GjYmxAsO5Vw6qXy0gbk2BKB56WUDU',
 
-    // CORS Proxy options (try multiple if one fails)
+    // CORS Proxy options
     CORS_PROXIES: [
         'https://api.allorigins.win/raw?url=',
         'https://corsproxy.io/?',
@@ -30,7 +30,6 @@ const CONFIG = {
 
     // RSS Feed Sources
     RSS_FEEDS: {
-        // Headlines - includes wire services and major publications
         headlines: [
             { name: 'AP', url: 'https://feedx.net/rss/ap.xml', source: 'ap' },
             { name: 'Reuters', url: 'https://feedx.net/rss/reuters.xml', source: 'reuters' },
@@ -44,12 +43,6 @@ const CONFIG = {
             { name: 'Block Club', url: 'https://blockclubchicago.org/feed/', source: 'blockclub' },
             { name: 'Onion', url: 'https://theonion.com/feed/', source: 'onion' }
         ],
-        // Reading panel feeds
-        reading: {
-            instapaper: 'https://instapaper.com/rss/8194512/enei3iXcVSKeLjHiSxpzTLR8Ta4',
-            goodreads: 'https://www.goodreads.com/review/list_rss/56452115?key=SX0ZapaytFucPK03UJVw9dBSCdmxUZPWoWlYlJbdZUHKf-4s&shelf=currently-reading'
-        },
-        // Substacks
         substacks: [
             { name: 'Slow Boring', author: 'Matt Yglesias', url: 'https://www.slowboring.com/feed', source: 'substack' },
             { name: 'Noahpinion', author: 'Noah Smith', url: 'https://www.noahpinion.blog/feed', source: 'substack' },
@@ -63,31 +56,14 @@ const CONFIG = {
         ]
     },
 
-    // Index ETF proxies (Finnhub doesn't support index symbols directly)
+    STOCKS: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'DIS', 'T'],
+
     INDICES: {
-        sp500: { symbol: 'SPY', label: 'S&P' },      // SPY tracks S&P 500
-        nasdaq: { symbol: 'QQQ', label: 'NASDAQ' },  // QQQ tracks NASDAQ-100
-        dow: { symbol: 'DIA', label: 'DOW' }         // DIA tracks Dow Jones
+        sp500: '^GSPC',
+        nasdaq: '^IXIC',
+        dow: '^DJI'
     },
 
-    // Crypto symbols for Finnhub
-    CRYPTO: {
-        btc: { symbol: 'BINANCE:BTCUSDT', label: 'BTC' }
-    },
-
-    // Commodities - WTI Oil ETF proxy
-    COMMODITIES: {
-        wti: { symbol: 'USO', label: 'WTI' }  // USO tracks WTI crude oil
-    },
-
-    // FRED API for Treasury rates and SOFR (free at fred.stlouisfed.org)
-    FRED_API_KEY: '',  // Get free key at https://fred.stlouisfed.org/docs/api/api_key.html
-    FRED_SERIES: {
-        treasury10y: { id: 'DGS10', label: '10Y' },   // 10-Year Treasury Rate
-        sofr: { id: 'SOFR', label: 'SOFR' }           // Secured Overnight Financing Rate
-    },
-
-    // Sports teams (ESPN team IDs)
     SPORTS: {
         cubs: { name: 'Cubs', sport: 'baseball', league: 'mlb', team: 'chc', abbrev: 'CHC' },
         bears: { name: 'Bears', sport: 'football', league: 'nfl', team: 'chi', abbrev: 'CHI' },
@@ -97,11 +73,18 @@ const CONFIG = {
         iuBasketball: { name: 'IU BB', sport: 'basketball', league: 'mens-college-basketball', team: '84', abbrev: 'IU' }
     },
 
-    // Weather (Chicago)
-    WEATHER_ZONE: 'ILZ014', // Chicago zone
+    WEATHER_ZONE: 'ILZ014',
 
-    // Twitter accounts
-    TWITTER_ACCOUNTS: ['AP', 'Reuters', 'BNONews', 'NWSChicago']
+    // Alert tier thresholds
+    ALERT_KEYWORDS_FLASH: ['BREAKING', 'URGENT', 'FLASH', 'EMERGENCY'],
+    ALERT_KEYWORDS_PRIORITY: ['DEVELOPING', 'UPDATE', 'ALERT'],
+
+    // Risk gauge thresholds
+    RISK_THRESHOLDS: {
+        vix: { low: 15, mid: 20, high: 25, extreme: 30 },
+        yield: { inverted: 0, low: 0.5, normal: 1.0 },
+        unemployment: { low: 4, mid: 5, high: 6 }
+    }
 };
 
 // ============================================
@@ -116,153 +99,194 @@ const State = {
     errors: 0,
     cache: JSON.parse(localStorage.getItem('dashboard-cache') || '{}'),
     currentProxy: 0,
-    // Daily accumulation
     todayDate: new Date().toDateString(),
     dailyHeadlines: JSON.parse(localStorage.getItem('daily-headlines') || '[]'),
     dailySubstacks: JSON.parse(localStorage.getItem('daily-substacks') || '[]'),
-    readItems: JSON.parse(localStorage.getItem('read-items') || '{}')
+    readItems: JSON.parse(localStorage.getItem('read-items') || '{}'),
+    // New v2 state
+    riskGauges: {},
+    signals: [],
+    sweepDelta: null,
+    lastSeen: localStorage.getItem('last-seen') || null,
+    journalEntries: [],
+    predictions: null,
+    bootComplete: sessionStorage.getItem('boot-complete') === 'true',
+    secondaryOpen: false,
+    sensorStatus: {}
 };
 
-// Check if it's a new day and reset accumulated items
-function checkDailyReset() {
-    const today = new Date().toDateString();
-    const storedDate = localStorage.getItem('daily-date');
+// ============================================
+// BOOT SEQUENCE
+// ============================================
 
-    if (storedDate !== today) {
-        // New day - reset everything
-        State.dailyHeadlines = [];
-        State.dailySubstacks = [];
-        State.readItems = {};
-        State.todayDate = today;
-        localStorage.setItem('daily-date', today);
-        localStorage.setItem('daily-headlines', '[]');
-        localStorage.setItem('daily-substacks', '[]');
-        localStorage.setItem('read-items', '{}');
-        console.log('New day detected - resetting daily feeds');
+const BOOT_LINES = [
+    { text: 'MARKET FEEDS', status: 'pending' },
+    { text: 'RSS SOURCES (11)', status: 'pending' },
+    { text: 'FRED INDICATORS', status: 'pending' },
+    { text: 'ENERGY DATA', status: 'pending' },
+    { text: 'SUPABASE SYNC', status: 'pending' },
+    { text: 'WEATHER SERVICE', status: 'pending' },
+    { text: 'SPORTS FEED', status: 'pending' },
+    { text: 'PREDICTIONS DB', status: 'pending' },
+    { text: 'SWEEP DELTA COMPUTING...', status: 'info' }
+];
+
+let bootLineIndex = 0;
+let bootTimeout = null;
+
+function initBoot() {
+    if (State.bootComplete) {
+        document.getElementById('boot-overlay').classList.add('hidden');
+        initDashboard();
+        return;
     }
+
+    const log = document.getElementById('boot-log');
+    log.innerHTML = '';
+    bootLineIndex = 0;
+    showNextBootLine();
 }
 
-// Mark an item as read and save to Instapaper
-function markAsRead(itemId, url, title) {
-    State.readItems[itemId] = true;
-    localStorage.setItem('read-items', JSON.stringify(State.readItems));
+function showNextBootLine() {
+    if (bootLineIndex >= BOOT_LINES.length) {
+        // Final line
+        const log = document.getElementById('boot-log');
+        const final = document.createElement('div');
+        final.className = 'boot-log-line';
+        final.innerHTML = '<span class="info">TERMINAL ACTIVE</span>';
+        final.style.animationDelay = '0.1s';
+        log.appendChild(final);
 
-    // Update the UI
-    const element = document.querySelector(`[data-item-id="${itemId}"]`);
-    if (element) {
-        element.classList.add('read');
+        bootTimeout = setTimeout(() => completeBoot(), 800);
+        return;
     }
 
-    // Save to Instapaper if configured
-    if (CONFIG.INSTAPAPER_USERNAME && url) {
-        saveToInstapaper(url, title);
-    }
+    const line = BOOT_LINES[bootLineIndex];
+    const log = document.getElementById('boot-log');
+    const el = document.createElement('div');
+    el.className = 'boot-log-line';
+
+    const statusClass = line.status === 'info' ? 'info' : 'ok';
+    const prefix = line.status === 'info' ? '[--]' : '[OK]';
+    el.innerHTML = `<span class="${statusClass}">${prefix}</span> ${line.text}`;
+
+    log.appendChild(el);
+    bootLineIndex++;
+
+    bootTimeout = setTimeout(() => showNextBootLine(), 200);
 }
 
-// Save article to Instapaper
-async function saveToInstapaper(url, title) {
-    try {
-        const params = new URLSearchParams({
-            username: CONFIG.INSTAPAPER_USERNAME,
-            password: CONFIG.INSTAPAPER_PASSWORD || '',
-            url: url,
-            title: title || ''
-        });
-
-        // Use CORS proxy to reach Instapaper API
-        const proxyUrl = CONFIG.CORS_PROXIES[0] + encodeURIComponent(
-            `https://www.instapaper.com/api/add?${params.toString()}`
-        );
-
-        const response = await fetch(proxyUrl, { method: 'GET' });
-
-        if (response.ok) {
-            console.log('Saved to Instapaper:', title || url);
-            showInstapaperNotification('Saved to Instapaper');
-        } else {
-            console.warn('Instapaper save failed:', response.status);
-            showInstapaperNotification('Instapaper save failed', true);
-        }
-    } catch (e) {
-        console.warn('Instapaper error:', e);
-        // Fallback: open Instapaper in background tab
-        const instapaperUrl = `https://www.instapaper.com/hello2?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title || '')}`;
-        window.open(instapaperUrl, '_blank', 'width=500,height=350');
-    }
+function skipBoot() {
+    if (bootTimeout) clearTimeout(bootTimeout);
+    completeBoot();
 }
 
-// Show brief notification for Instapaper saves
-function showInstapaperNotification(message, isError = false) {
-    const notification = document.createElement('div');
-    notification.className = `instapaper-notification ${isError ? 'error' : 'success'}`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
+function completeBoot() {
+    const overlay = document.getElementById('boot-overlay');
+    overlay.classList.add('fade-out');
+    sessionStorage.setItem('boot-complete', 'true');
+    State.bootComplete = true;
 
     setTimeout(() => {
-        notification.classList.add('fade-out');
-        setTimeout(() => notification.remove(), 300);
-    }, 2000);
+        overlay.classList.add('hidden');
+    }, 600);
+
+    initDashboard();
 }
 
-// Generate unique ID for an item
-function getItemId(item) {
-    return btoa(encodeURIComponent(item.title + item.link)).slice(0, 32);
+// ============================================
+// DASHBOARD INITIALIZATION
+// ============================================
+
+function initDashboard() {
+    initTheme();
+    initClock();
+    initSecondaryNav();
+    initJournalInput();
+    checkDailyReset();
+    updateAll();
+    setInterval(updateAll, CONFIG.REFRESH_INTERVAL);
+}
+
+function updateAll() {
+    State.feedsLoaded = 0;
+    State.feedsTotal = 0;
+    State.errors = 0;
+
+    // Count expected feeds
+    State.feedsTotal = CONFIG.RSS_FEEDS.headlines.length + CONFIG.RSS_FEEDS.substacks.length + 5; // +5 for stocks, weather, congress, sports, backend
+
+    // Client-side fetches
+    fetchStockData();
+    fetchHeadlinesFeed();
+    fetchSubstacksFeed();
+    fetchAlertBar();
+    fetchWeatherAlerts();
+    fetchCongressStatus();
+    fetchSportsData();
+
+    // Backend fetches (if backend configured)
+    if (CONFIG.BACKEND_URL) {
+        fetchRiskGauges();
+        fetchSweepDelta();
+        fetchPredictions();
+        fetchJournalEntries();
+    } else {
+        // Fallback: direct API calls for risk gauges
+        fetchRiskGaugesDirect();
+        renderSweepDeltaLocal();
+        fetchPredictionsDirect();
+        // Use Supabase directly if configured, otherwise localStorage
+        if (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
+            fetchJournalFromSupabase();
+        } else {
+            loadJournalFromLocalStorage();
+        }
+    }
+
+    // Update signals
+    computeSignals();
+
+    // Update timestamps
+    State.lastUpdate = new Date();
+    document.getElementById('last-updated').textContent = `Updated: ${formatTime(State.lastUpdate)}`;
+    document.getElementById('sweep-time').textContent = `Last sweep: ${formatTime(State.lastUpdate)}`;
+
+    // Update Excel elements
+    updateExcelTime();
 }
 
 // ============================================
 // UTILITIES
 // ============================================
 
-/**
- * Format time as HH:MM
- */
 function formatTime(date) {
-    return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    });
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-/**
- * Format time with seconds
- */
 function formatTimeFull(date) {
-    return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    });
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
-/**
- * Format relative time
- */
 function formatRelativeTime(date) {
     const now = new Date();
     const diff = now - date;
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
-
     if (minutes < 1) return 'now';
     if (minutes < 60) return `${minutes}m`;
     if (hours < 24) return `${hours}h`;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/**
- * Fetch with CORS proxy fallback
- */
 async function fetchWithProxy(url) {
-    // Try rss2json first (most reliable for RSS)
+    // Try rss2json first
     try {
         const rss2jsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
         const response = await fetch(rss2jsonUrl);
         if (response.ok) {
             const data = await response.json();
             if (data.status === 'ok' && data.items) {
-                // Convert rss2json format to XML-like structure for parsing
                 return convertRss2JsonToXml(data);
             }
         }
@@ -271,13 +295,12 @@ async function fetchWithProxy(url) {
     }
 
     // Fallback to CORS proxies
-    const proxies = CONFIG.CORS_PROXIES;
-    for (let i = 0; i < proxies.length; i++) {
+    for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
         try {
-            const proxyUrl = proxies[(State.currentProxy + i) % proxies.length] + encodeURIComponent(url);
+            const proxyUrl = CONFIG.CORS_PROXIES[(State.currentProxy + i) % CONFIG.CORS_PROXIES.length] + encodeURIComponent(url);
             const response = await fetch(proxyUrl);
             if (response.ok) {
-                State.currentProxy = (State.currentProxy + i) % proxies.length;
+                State.currentProxy = (State.currentProxy + i) % CONFIG.CORS_PROXIES.length;
                 return await response.text();
             }
         } catch (e) {
@@ -287,9 +310,6 @@ async function fetchWithProxy(url) {
     throw new Error('All proxies failed');
 }
 
-/**
- * Convert rss2json response to simple XML for parser compatibility
- */
 function convertRss2JsonToXml(data) {
     const items = data.items.map(item => `
         <item>
@@ -298,32 +318,20 @@ function convertRss2JsonToXml(data) {
             <pubDate>${item.pubDate || ''}</pubDate>
         </item>
     `).join('');
-
     return `<?xml version="1.0"?><rss><channel>${items}</channel></rss>`;
 }
 
-/**
- * Parse RSS XML to items
- */
 function parseRSS(xml) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xml, 'text/xml');
-
-    // Check for parse errors
-    const parseError = doc.querySelector('parsererror');
-    if (parseError) {
-        throw new Error('Invalid RSS feed');
-    }
+    if (doc.querySelector('parsererror')) throw new Error('Invalid RSS feed');
 
     const items = [];
-    const entries = doc.querySelectorAll('item, entry');
-
-    entries.forEach(entry => {
+    doc.querySelectorAll('item, entry').forEach(entry => {
         const title = entry.querySelector('title')?.textContent?.trim() || '';
         const link = entry.querySelector('link')?.textContent?.trim() ||
                      entry.querySelector('link')?.getAttribute('href') || '';
         const pubDate = entry.querySelector('pubDate, published, updated')?.textContent || '';
-
         if (title) {
             items.push({
                 title: decodeHTMLEntities(title),
@@ -332,22 +340,15 @@ function parseRSS(xml) {
             });
         }
     });
-
     return items;
 }
 
-/**
- * Decode HTML entities
- */
 function decodeHTMLEntities(text) {
     const textarea = document.createElement('textarea');
     textarea.innerHTML = text;
     return textarea.value;
 }
 
-/**
- * Save cache to localStorage
- */
 function saveCache() {
     try {
         localStorage.setItem('dashboard-cache', JSON.stringify(State.cache));
@@ -356,9 +357,6 @@ function saveCache() {
     }
 }
 
-/**
- * Update feed counter
- */
 function updateFeedStatus(loaded, total, error = false) {
     if (loaded !== undefined) State.feedsLoaded = loaded;
     if (total !== undefined) State.feedsTotal = total;
@@ -370,43 +368,85 @@ function updateFeedStatus(loaded, total, error = false) {
 
     const statusEl = document.getElementById('connection-status');
     if (State.errors > State.feedsTotal / 2) {
-        statusEl.textContent = '● DEGRADED';
+        statusEl.textContent = '\u25CF DEGRADED';
         statusEl.className = 'status-error';
     } else {
-        statusEl.textContent = '● CONNECTED';
+        statusEl.textContent = '\u25CF CONNECTED';
         statusEl.className = 'status-ok';
     }
+
+    // Update sensor grid
+    updateSensorGrid();
+}
+
+function getItemId(item) {
+    return btoa(encodeURIComponent(item.title + item.link)).slice(0, 32);
+}
+
+function checkDailyReset() {
+    const today = new Date().toDateString();
+    const storedDate = localStorage.getItem('daily-date');
+    if (storedDate !== today) {
+        State.dailyHeadlines = [];
+        State.dailySubstacks = [];
+        State.readItems = {};
+        State.todayDate = today;
+        localStorage.setItem('daily-date', today);
+        localStorage.setItem('daily-headlines', '[]');
+        localStorage.setItem('daily-substacks', '[]');
+        localStorage.setItem('read-items', '{}');
+    }
+}
+
+function markAsRead(itemId, url, title) {
+    State.readItems[itemId] = true;
+    localStorage.setItem('read-items', JSON.stringify(State.readItems));
+    const element = document.querySelector(`[data-item-id="${itemId}"]`);
+    if (element) element.classList.add('read');
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 300);
+    }, 2000);
 }
 
 // ============================================
 // CLOCK
 // ============================================
 
+function initClock() {
+    updateClock();
+    setInterval(updateClock, 1000);
+}
+
 function updateClock() {
     document.getElementById('clock').textContent = formatTimeFull(new Date());
+    const excelClock = document.getElementById('excel-clock');
+    if (excelClock) excelClock.textContent = formatTimeFull(new Date());
 }
 
 // ============================================
-// THEME TOGGLE (3 themes: dark, light, excel)
+// THEME TOGGLE (3 themes)
 // ============================================
 
 const THEMES = ['dark', 'light', 'excel'];
-const THEME_ICONS = { dark: '☀', light: '◐', excel: '▦' };
-const THEME_LABELS = { dark: 'Dark', light: 'Light', excel: 'Excel' };
+const THEME_ICONS = { dark: '\u2600', light: '\u25D0', excel: '\u25A6' };
 
 function initTheme() {
-    // Ensure theme is valid
-    if (!THEMES.includes(State.theme)) {
-        State.theme = 'dark';
-    }
+    if (!THEMES.includes(State.theme)) State.theme = 'dark';
     document.documentElement.setAttribute('data-theme', State.theme);
     updateThemeButton();
     initExcelUI();
 }
 
 function toggleTheme() {
-    const currentIndex = THEMES.indexOf(State.theme);
-    const nextIndex = (currentIndex + 1) % THEMES.length;
+    const nextIndex = (THEMES.indexOf(State.theme) + 1) % THEMES.length;
     State.theme = THEMES[nextIndex];
     document.documentElement.setAttribute('data-theme', State.theme);
     localStorage.setItem('dashboard-theme', State.theme);
@@ -415,20 +455,14 @@ function toggleTheme() {
 
 function updateThemeButton() {
     const btn = document.getElementById('theme-toggle');
-    btn.textContent = THEME_ICONS[State.theme] || '◐';
-    btn.title = `Current: ${THEME_LABELS[State.theme]} (click to change)`;
+    btn.textContent = THEME_ICONS[State.theme] || '\u25D0';
 }
 
 // ============================================
-// EXCEL UI FUNCTIONS
+// EXCEL UI
 // ============================================
 
 function initExcelUI() {
-    // Update Excel clock
-    updateExcelClock();
-    setInterval(updateExcelClock, 1000);
-
-    // Set up hover events to update formula bar
     document.addEventListener('mouseover', (e) => {
         const feedItem = e.target.closest('.feed-item, .substack-item');
         if (feedItem && State.theme === 'excel') {
@@ -440,365 +474,211 @@ function initExcelUI() {
     });
 }
 
-function updateExcelClock() {
-    const clockEl = document.getElementById('excel-clock');
-    if (clockEl) {
-        clockEl.textContent = formatTimeFull(new Date());
-    }
-}
-
 function updateExcelStocks(quoteMap) {
-    // Update S&P in ribbon
-    const sp500 = quoteMap['sp500'];
-    if (sp500) {
-        const el = document.getElementById('excel-sp500');
-        if (el) {
-            const change = sp500.changePercent || 0;
-            const isPositive = change >= 0;
-            el.className = `ribbon-btn ${isPositive ? 'stock-positive' : 'stock-negative'}`;
-            el.innerHTML = `
-                <span class="ribbon-btn-icon" style="color: ${isPositive ? '#006600' : '#cc0000'};">${isPositive ? '▲' : '▼'}</span>
-                <span>S&P ${formatPercent(change)}</span>
-            `;
-        }
-    }
-
-    // Update DOW in ribbon
-    const dow = quoteMap['dow'];
-    if (dow) {
-        const el = document.getElementById('excel-dow');
-        if (el) {
-            const change = dow.changePercent || 0;
-            const isPositive = change >= 0;
-            el.className = `ribbon-btn ${isPositive ? 'stock-positive' : 'stock-negative'}`;
-            el.innerHTML = `
-                <span class="ribbon-btn-icon" style="color: ${isPositive ? '#006600' : '#cc0000'};">${isPositive ? '▲' : '▼'}</span>
-                <span>DOW ${formatPercent(change)}</span>
-            `;
-        }
-    }
-
-    // Update BTC in ribbon
-    const btc = quoteMap['btc'];
-    if (btc) {
-        const el = document.getElementById('excel-btc');
-        if (el) {
-            const change = btc.changePercent || 0;
-            const isPositive = change >= 0;
-            el.className = `ribbon-btn ${isPositive ? 'stock-positive' : 'stock-negative'}`;
-            el.innerHTML = `
-                <span class="ribbon-btn-icon" style="color: ${isPositive ? '#006600' : '#cc0000'};">${isPositive ? '▲' : '▼'}</span>
-                <span>BTC ${formatPercent(change)}</span>
-            `;
-        }
-    }
+    const updates = [
+        { id: 'excel-sp500', symbol: '^GSPC', label: 'S&P' },
+        { id: 'excel-dow', symbol: '^DJI', label: 'DOW' },
+        { id: 'excel-btc', symbol: 'BTC-USD', label: 'BTC' }
+    ];
+    updates.forEach(({ id, symbol, label }) => {
+        const quote = quoteMap[symbol];
+        const el = document.getElementById(id);
+        if (!el || !quote) return;
+        const change = getQuoteChange(quote);
+        const pos = change >= 0;
+        el.className = `ribbon-btn ${pos ? 'stock-positive' : 'stock-negative'}`;
+        el.innerHTML = `<span class="ribbon-btn-icon" style="color: ${pos ? '#006600' : '#cc0000'};">${pos ? '\u25B2' : '\u25BC'}</span><span>${label} ${formatPercent(change)}</span>`;
+    });
 }
 
 function updateExcelStatus(congress, weather) {
-    // Update congress status in ribbon
-    const congressEl = document.getElementById('excel-congress');
-    if (congressEl && congress) {
-        const isSession = congress.includes('SESSION');
-        congressEl.innerHTML = `
-            <span class="ribbon-btn-icon">🏛️</span>
-            <span style="color: ${isSession ? '#006600' : '#666'};">${congress}</span>
-        `;
+    if (congress) {
+        const el = document.getElementById('excel-congress');
+        if (el) {
+            const isSession = congress.includes('SESSION');
+            el.innerHTML = `<span class="ribbon-btn-icon">\u{1F3DB}\uFE0F</span><span style="color: ${isSession ? '#006600' : '#666'};">${congress}</span>`;
+        }
     }
-
-    // Update weather in ribbon
-    const weatherEl = document.getElementById('excel-weather');
-    if (weatherEl && weather) {
-        const hasAlert = !weather.includes('NO ALERT');
-        weatherEl.innerHTML = `
-            <span class="ribbon-btn-icon">${hasAlert ? '⚠️' : '🌤️'}</span>
-            <span style="color: ${hasAlert ? '#cc0000' : '#666'};">${weather}</span>
-        `;
+    if (weather) {
+        const el = document.getElementById('excel-weather');
+        if (el) {
+            const hasAlert = !weather.includes('NO ALERT');
+            el.innerHTML = `<span class="ribbon-btn-icon">${hasAlert ? '\u26A0\uFE0F' : '\u{1F324}\uFE0F'}</span><span style="color: ${hasAlert ? '#cc0000' : '#666'};">${weather}</span>`;
+        }
     }
 }
 
 function updateExcelTime() {
     const el = document.getElementById('excel-updated');
-    if (el) {
-        el.textContent = `Updated: ${formatTime(new Date())}`;
-    }
+    if (el) el.textContent = `Updated: ${formatTime(new Date())}`;
 }
 
 // ============================================
-// STOCK DATA (Finnhub API)
+// SPARKLINES
+// ============================================
+
+function renderSparkline(svgId, values, direction) {
+    const svg = document.getElementById(svgId);
+    if (!svg || !values || values.length < 2) return;
+
+    const w = 40, h = 14;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+
+    const points = values.map((v, i) => {
+        const x = (i / (values.length - 1)) * w;
+        const y = h - ((v - min) / range) * (h - 2) - 1;
+        return `${x},${y}`;
+    }).join(' ');
+
+    svg.innerHTML = `<polyline points="${points}" />`;
+    svg.className.baseVal = `sparkline ${direction}`;
+}
+
+function renderGaugeSparkline(gaugeId, values) {
+    const gauge = document.getElementById(gaugeId);
+    if (!gauge) return;
+    const svg = gauge.querySelector('.gauge-sparkline');
+    if (!svg || !values || values.length < 2) return;
+
+    const w = svg.clientWidth || 220;
+    const h = 20;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+
+    const points = values.map((v, i) => {
+        const x = (i / (values.length - 1)) * w;
+        const y = h - ((v - min) / range) * (h - 2) - 1;
+        return `${x},${y}`;
+    }).join(' ');
+
+    svg.innerHTML = `<polyline points="${points}" />`;
+}
+
+// ============================================
+// STOCK DATA
 // ============================================
 
 async function fetchStockData() {
-    if (!CONFIG.FINNHUB_API_KEY) {
-        console.warn('Finnhub API key not configured - markets will not load');
-        showStockError('Add Finnhub API key to CONFIG');
-        return;
-    }
-
     try {
-        // Build list of symbols to fetch from Finnhub
-        // Indices (ETF proxies), BTC, and WTI (USO ETF)
-        const symbolsToFetch = [
-            ...Object.entries(CONFIG.INDICES).map(([key, val]) => ({ key, symbol: val.symbol, type: 'index' })),
-            { key: 'btc', symbol: CONFIG.CRYPTO.btc.symbol, type: 'crypto' },
-            { key: 'wti', symbol: CONFIG.COMMODITIES.wti.symbol, type: 'commodity' }
-        ];
+        const symbols = [...Object.values(CONFIG.INDICES), ...CONFIG.STOCKS, 'BTC-USD', 'CL=F'];
+        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(',')}`;
 
-        // Fetch all quotes in parallel
-        const results = await Promise.all(
-            symbolsToFetch.map(item => fetchFinnhubQuote(item.symbol, item.key, item.type))
-        );
-
-        // Build quote map from results
-        const quoteMap = {};
-        results.forEach(result => {
-            if (result && result.key) {
-                quoteMap[result.key] = result;
+        try {
+            const data = await fetchWithProxy(url);
+            const json = JSON.parse(data);
+            if (json.quoteResponse && json.quoteResponse.result) {
+                processStockData(json.quoteResponse.result);
+                State.cache.stocks = { data: json.quoteResponse.result, timestamp: Date.now() };
+                saveCache();
+                updateSensor('markets', 'ok', symbols.length);
+                return;
             }
-        });
+        } catch (e) {
+            console.warn('Yahoo Finance failed:', e);
+        }
 
-        // Process and display
-        processStockData(quoteMap);
-
-        // Cache results
-        State.cache.stocks = { data: quoteMap, timestamp: Date.now() };
-        saveCache();
-
-    } catch (e) {
-        console.error('Stock data fetch failed:', e);
-        updateFeedStatus(undefined, undefined, true);
-
-        // Fallback to cached data
         if (State.cache.stocks) {
             processStockData(State.cache.stocks.data);
+            updateSensor('markets', 'warn', 'cached');
         }
-    }
-}
-
-/**
- * Fetch a single quote from Finnhub
- */
-async function fetchFinnhubQuote(symbol, key, type) {
-    try {
-        const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${CONFIG.FINNHUB_API_KEY}`;
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        // Finnhub returns: c=current, d=change, dp=percent change, pc=previous close
-        if (data && data.c) {
-            return {
-                key: key,
-                symbol: symbol,
-                type: type,
-                price: data.c,
-                change: data.d,
-                changePercent: data.dp,
-                previousClose: data.pc
-            };
-        }
-        return null;
     } catch (e) {
-        console.warn(`Finnhub quote failed for ${symbol}:`, e.message);
-        return null;
+        console.error('Stock data fetch failed:', e);
+        updateSensor('markets', 'error', 'ERR');
+        updateFeedStatus(undefined, undefined, true);
     }
 }
 
-function showStockError(message) {
-    // Update all market displays with error
-    ['sp500', 'nasdaq', 'dow', 'btc', 'wti'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            const valueEl = el.querySelector('.ticker-value');
-            const changeEl = el.querySelector('.ticker-change');
-            if (valueEl) valueEl.textContent = '---';
-            if (changeEl) {
-                changeEl.textContent = message;
-                changeEl.className = 'ticker-change neutral';
-            }
+function processStockData(quotes) {
+    const quoteMap = {};
+    quotes.forEach(q => { quoteMap[q.symbol] = q; });
+
+    // Update indices with sparkline data
+    updateTickerItem('sp500', quoteMap['^GSPC']);
+    updateTickerItem('nasdaq', quoteMap['^IXIC']);
+    updateTickerItem('dow', quoteMap['^DJI']);
+    updateTickerItem('btc', quoteMap['BTC-USD']);
+    updateTickerItem('oil', quoteMap['CL=F']);
+
+    // Store sparkline history
+    storeSparklineHistory(quoteMap);
+
+    // Individual stocks
+    const stocksContainer = document.getElementById('stocks-ticker');
+    stocksContainer.innerHTML = '';
+    CONFIG.STOCKS.forEach(symbol => {
+        const quote = quoteMap[symbol];
+        if (quote) {
+            const price = getQuotePrice(quote);
+            const change = getQuoteChange(quote);
+            const item = document.createElement('span');
+            item.className = 'ticker-item';
+            item.innerHTML = `
+                <span class="ticker-label">${symbol}</span>
+                <span class="ticker-value">${formatPrice(price)}</span>
+                <span class="ticker-change ${getChangeClass(change)}">${formatPercent(change)}</span>
+            `;
+            stocksContainer.appendChild(item);
         }
     });
-}
 
-function processStockData(quoteMap) {
-    // Update indices (using ETF proxies)
-    updateTickerItem('sp500', quoteMap['sp500'], CONFIG.INDICES.sp500.label);
-    updateTickerItem('nasdaq', quoteMap['nasdaq'], CONFIG.INDICES.nasdaq.label);
-    updateTickerItem('dow', quoteMap['dow'], CONFIG.INDICES.dow.label);
-
-    // Update BTC
-    updateTickerItem('btc', quoteMap['btc'], 'BTC');
-
-    // Update WTI (using USO ETF as proxy)
-    updateTickerItem('wti', quoteMap['wti'], 'WTI');
-
-    // Update Excel ribbon stocks
     updateExcelStocks(quoteMap);
+    State.feedsLoaded++;
+    updateFeedStatus();
 }
 
-// ============================================
-// TREASURY & SOFR RATES (FRED API)
-// ============================================
+function storeSparklineHistory(quoteMap) {
+    // Store price history for sparklines in localStorage
+    const history = JSON.parse(localStorage.getItem('sparkline-history') || '{}');
+    const now = Date.now();
 
-async function fetchFredRates() {
-    // FRED API is free but requires an API key
-    // For now, try fetching without key (limited) or show placeholder
-    if (!CONFIG.FRED_API_KEY) {
-        // Try alternative: fetch from Treasury.gov or show as unavailable
-        await fetchTreasuryDirect();
-        return;
-    }
+    const trackSymbols = { sp500: '^GSPC', nasdaq: '^IXIC', dow: '^DJI', btc: 'BTC-USD', oil: 'CL=F' };
 
-    try {
-        const results = await Promise.all([
-            fetchFredSeries('DGS10', 'treasury10y'),  // 10-Year Treasury
-            fetchFredSeries('SOFR', 'sofr')           // SOFR rate
-        ]);
+    Object.entries(trackSymbols).forEach(([key, symbol]) => {
+        const quote = quoteMap[symbol];
+        if (!quote) return;
+        const price = getQuotePrice(quote);
+        if (!price) return;
 
-        results.forEach(result => {
-            if (result) {
-                updateRateItem(result.key, result.value, result.change);
-            }
-        });
+        if (!history[key]) history[key] = [];
+        history[key].push({ t: now, v: price });
+        // Keep last 30 data points
+        if (history[key].length > 30) history[key] = history[key].slice(-30);
 
-        State.cache.rates = { data: results, timestamp: Date.now() };
-        saveCache();
+        const values = history[key].map(p => p.v);
+        const change = getQuoteChange(quote);
+        const direction = change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral';
+        renderSparkline(`spark-${key}`, values, direction);
+    });
 
-    } catch (e) {
-        console.warn('FRED rates fetch failed:', e);
-        if (State.cache.rates) {
-            State.cache.rates.data.forEach(result => {
-                if (result) updateRateItem(result.key, result.value, result.change);
-            });
-        }
-    }
+    localStorage.setItem('sparkline-history', JSON.stringify(history));
 }
 
-async function fetchFredSeries(seriesId, key) {
-    try {
-        const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${CONFIG.FRED_API_KEY}&file_type=json&limit=2&sort_order=desc`;
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.observations && data.observations.length >= 1) {
-            const latest = parseFloat(data.observations[0].value);
-            const previous = data.observations.length > 1 ? parseFloat(data.observations[1].value) : latest;
-            const change = latest - previous;
-
-            return { key, value: latest, change };
-        }
-    } catch (e) {
-        console.warn(`FRED series ${seriesId} failed:`, e);
-    }
-    return null;
-}
-
-/**
- * Fallback: Fetch Treasury rates from Treasury.gov XML feed
- */
-async function fetchTreasuryDirect() {
-    try {
-        // Treasury.gov provides daily rates via XML
-        const url = 'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2025/all?type=daily_treasury_yield_curve&field_tdr_date_value=2025&page&_format=csv';
-        const data = await fetchWithProxy(url);
-
-        // Parse CSV - find 10-year rate
-        const lines = data.trim().split('\n');
-        if (lines.length >= 2) {
-            const headers = lines[0].split(',');
-            const latestRow = lines[lines.length - 1].split(',');
-            const prevRow = lines.length >= 3 ? lines[lines.length - 2].split(',') : latestRow;
-
-            // Find 10 Yr column index
-            const tenYrIndex = headers.findIndex(h => h.includes('10 Yr'));
-            if (tenYrIndex !== -1) {
-                const latest = parseFloat(latestRow[tenYrIndex]);
-                const previous = parseFloat(prevRow[tenYrIndex]);
-
-                if (!isNaN(latest)) {
-                    updateRateItem('treasury10y', latest, latest - previous);
-
-                    State.cache.treasury = { value: latest, change: latest - previous, timestamp: Date.now() };
-                    saveCache();
-                }
-            }
-        }
-
-        // SOFR - try NY Fed
-        await fetchSofrFromNYFed();
-
-    } catch (e) {
-        console.warn('Treasury direct fetch failed:', e);
-        // Show as unavailable
-        updateRateItem('treasury10y', null, null);
-        updateRateItem('sofr', null, null);
-    }
-}
-
-async function fetchSofrFromNYFed() {
-    try {
-        // NY Fed SOFR API
-        const url = 'https://markets.newyorkfed.org/api/rates/secured/sofr/last/2.json';
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.refRates && data.refRates.length >= 1) {
-            const latest = data.refRates[0].percentRate;
-            const previous = data.refRates.length > 1 ? data.refRates[1].percentRate : latest;
-
-            updateRateItem('sofr', latest, latest - previous);
-
-            State.cache.sofr = { value: latest, change: latest - previous, timestamp: Date.now() };
-            saveCache();
-        }
-    } catch (e) {
-        console.warn('NY Fed SOFR fetch failed:', e);
-        updateRateItem('sofr', null, null);
-    }
-}
-
-function updateRateItem(id, value, change) {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    const valueEl = el.querySelector('.ticker-value');
-    const changeEl = el.querySelector('.ticker-change');
-
-    if (value === null || isNaN(value)) {
-        if (valueEl) valueEl.textContent = '---';
-        if (changeEl) {
-            changeEl.textContent = 'N/A';
-            changeEl.className = 'ticker-change neutral';
-        }
-        return;
-    }
-
-    // Rates are displayed as percentages (e.g., 4.25%)
-    if (valueEl) valueEl.textContent = value.toFixed(2) + '%';
-    if (changeEl) {
-        const changeVal = change || 0;
-        const sign = changeVal >= 0 ? '+' : '';
-        changeEl.textContent = `${sign}${changeVal.toFixed(2)}`;
-        changeEl.className = `ticker-change ${changeVal > 0 ? 'negative' : changeVal < 0 ? 'positive' : 'neutral'}`;
-        // Note: For rates, UP is usually considered negative for markets (higher borrowing costs)
-    }
-}
-
-function updateTickerItem(id, quote, label) {
+function updateTickerItem(id, quote) {
     const el = document.getElementById(id);
     if (!el || !quote) return;
-
     const valueEl = el.querySelector('.ticker-value');
     const changeEl = el.querySelector('.ticker-change');
-
-    if (valueEl) valueEl.textContent = formatPrice(quote.price);
+    const price = getQuotePrice(quote);
+    const change = getQuoteChange(quote);
+    if (valueEl) valueEl.textContent = formatPrice(price);
     if (changeEl) {
-        changeEl.textContent = formatPercent(quote.changePercent);
-        changeEl.className = `ticker-change ${getChangeClass(quote.changePercent)}`;
+        changeEl.textContent = formatPercent(change);
+        changeEl.className = `ticker-change ${getChangeClass(change)}`;
     }
+}
+
+function getQuotePrice(quote) {
+    return quote.regularMarketPrice || quote.postMarketPrice || quote.preMarketPrice || quote.regularMarketPreviousClose || null;
+}
+
+function getQuoteChange(quote) {
+    if (quote.regularMarketChangePercent != null) return quote.regularMarketChangePercent;
+    if (quote.postMarketChangePercent != null) return quote.postMarketChangePercent;
+    if (quote.preMarketChangePercent != null) return quote.preMarketChangePercent;
+    return 0;
 }
 
 function formatPrice(price) {
@@ -808,9 +688,8 @@ function formatPrice(price) {
 }
 
 function formatPercent(pct) {
-    if (pct === undefined || pct === null) return '--%';
-    const sign = pct >= 0 ? '+' : '';
-    return `${sign}${pct.toFixed(2)}%`;
+    if (pct == null) return '--%';
+    return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
 }
 
 function getChangeClass(pct) {
@@ -820,177 +699,7 @@ function getChangeClass(pct) {
 }
 
 // ============================================
-// READING PANEL (Instapaper + Goodreads)
-// ============================================
-
-async function fetchReadingPanel() {
-    const container = document.getElementById('reading-feed');
-
-    // Fetch both feeds in parallel
-    const [instapaperItems, goodreadsItems] = await Promise.all([
-        fetchInstapaperFeed(),
-        fetchGoodreadsFeed()
-    ]);
-
-    // Render the combined panel
-    renderReadingPanel(container, goodreadsItems, instapaperItems);
-    State.feedsLoaded += 2;
-    updateFeedStatus();
-}
-
-async function fetchInstapaperFeed() {
-    try {
-        const xml = await fetchWithProxy(CONFIG.RSS_FEEDS.reading.instapaper);
-        const items = parseRSS(xml);
-
-        // Cache
-        State.cache.instapaper = { items: items.slice(0, 15), timestamp: Date.now() };
-        saveCache();
-
-        return items.slice(0, 15);
-    } catch (e) {
-        console.warn('Instapaper feed failed:', e);
-        updateFeedStatus(undefined, undefined, true);
-
-        // Return cached data if available
-        if (State.cache.instapaper) {
-            return State.cache.instapaper.items;
-        }
-        return [];
-    }
-}
-
-async function fetchGoodreadsFeed() {
-    try {
-        // Goodreads needs full XML to get cover images and all books
-        // Skip rss2json (which strips fields) and use CORS proxies directly
-        const xml = await fetchGoodreadsDirectly(CONFIG.RSS_FEEDS.reading.goodreads);
-        const items = parseGoodreadsRSS(xml);
-
-        // Cache
-        State.cache.goodreads = { items: items, timestamp: Date.now() };
-        saveCache();
-
-        return items;
-    } catch (e) {
-        console.warn('Goodreads feed failed:', e);
-        updateFeedStatus(undefined, undefined, true);
-
-        // Return cached data if available
-        if (State.cache.goodreads) {
-            return State.cache.goodreads.items;
-        }
-        return [];
-    }
-}
-
-/**
- * Fetch Goodreads RSS directly via CORS proxy (bypassing rss2json which strips fields)
- */
-async function fetchGoodreadsDirectly(url) {
-    const proxies = CONFIG.CORS_PROXIES;
-    for (let i = 0; i < proxies.length; i++) {
-        try {
-            const proxyUrl = proxies[i] + encodeURIComponent(url);
-            const response = await fetch(proxyUrl);
-            if (response.ok) {
-                return await response.text();
-            }
-        } catch (e) {
-            console.warn(`Goodreads proxy ${i} failed:`, e.message);
-        }
-    }
-    throw new Error('All proxies failed for Goodreads');
-}
-
-/**
- * Parse Goodreads RSS which has different structure
- */
-function parseGoodreadsRSS(xml) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml, 'text/xml');
-
-    const items = [];
-    const entries = doc.querySelectorAll('item');
-
-    entries.forEach(entry => {
-        const title = entry.querySelector('title')?.textContent?.trim() || '';
-        const link = entry.querySelector('link')?.textContent?.trim() || '';
-        const author = entry.querySelector('author_name')?.textContent?.trim() || '';
-
-        // Get book cover from dedicated fields (prefer larger images)
-        let coverUrl = entry.querySelector('book_large_image_url')?.textContent?.trim() ||
-                       entry.querySelector('book_medium_image_url')?.textContent?.trim() ||
-                       entry.querySelector('book_image_url')?.textContent?.trim() ||
-                       entry.querySelector('book_small_image_url')?.textContent?.trim();
-
-        // Fallback: try to extract from description HTML if direct fields are empty
-        if (!coverUrl) {
-            const description = entry.querySelector('description')?.textContent || '';
-            const coverMatch = description.match(/src="([^"]+)"/);
-            coverUrl = coverMatch ? coverMatch[1] : null;
-        }
-
-        if (title) {
-            items.push({
-                title: decodeHTMLEntities(title),
-                author: decodeHTMLEntities(author),
-                link: link,
-                coverUrl: coverUrl
-            });
-        }
-    });
-
-    return items;
-}
-
-function renderReadingPanel(container, books, articles) {
-    let html = '';
-
-    // Currently Reading section
-    html += '<div class="reading-section">';
-    html += '<div class="reading-section-header">📚 CURRENTLY READING</div>';
-
-    if (books.length === 0) {
-        html += '<div class="reading-empty">No books currently reading</div>';
-    } else {
-        html += books.map(book => `
-            <div class="book-item">
-                <a href="${book.link}" target="_blank" rel="noopener">
-                    ${book.coverUrl ? `<img class="book-cover" src="${book.coverUrl}" alt="${book.title}" onerror="this.style.display='none'">` : '<div class="book-cover-placeholder">📖</div>'}
-                    <div class="book-info">
-                        <div class="book-title">${book.title}</div>
-                        <div class="book-author">by ${book.author}</div>
-                    </div>
-                </a>
-            </div>
-        `).join('');
-    }
-    html += '</div>';
-
-    // Saved Articles section
-    html += '<div class="reading-section">';
-    html += `<div class="reading-section-header">📑 SAVED ARTICLES (${articles.length})</div>`;
-
-    if (articles.length === 0) {
-        html += '<div class="reading-empty">No saved articles</div>';
-    } else {
-        html += articles.map(article => `
-            <div class="feed-item saved-article">
-                <a href="${article.link}" target="_blank" rel="noopener">
-                    <span class="feed-time">${formatRelativeTime(article.date)}</span>
-                    <span class="feed-headline">${article.title}</span>
-                </a>
-            </div>
-        `).join('');
-    }
-    html += '</div>';
-
-    container.innerHTML = html;
-}
-
-// ============================================
-// HEADLINES FEED (Daily Accumulation)
+// HEADLINES FEED
 // ============================================
 
 async function fetchHeadlinesFeed() {
@@ -1007,7 +716,6 @@ async function fetchHeadlinesFeed() {
                 item.sourceName = feed.name;
                 item.id = getItemId(item);
             });
-            // Drudge has more links, pull more from it
             const limit = feed.source === 'drudge' ? 20 : 5;
             newItems = newItems.concat(items.slice(0, limit));
             feedsLoaded++;
@@ -1017,23 +725,17 @@ async function fetchHeadlinesFeed() {
         }
     }
 
-    // Merge with existing daily headlines (avoid duplicates)
     const existingIds = new Set(State.dailyHeadlines.map(item => item.id));
     newItems.forEach(item => {
-        if (!existingIds.has(item.id)) {
-            State.dailyHeadlines.push(item);
-        }
+        if (!existingIds.has(item.id)) State.dailyHeadlines.push(item);
     });
 
-    // Sort by date (newest first)
     State.dailyHeadlines.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Save to localStorage
     localStorage.setItem('daily-headlines', JSON.stringify(State.dailyHeadlines));
 
-    // Render
     renderHeadlinesFeed(container, State.dailyHeadlines);
     State.feedsLoaded += feedsLoaded;
+    updateSensor('feeds', feedsLoaded > 0 ? 'ok' : 'error', feedsLoaded);
     updateFeedStatus();
 }
 
@@ -1067,7 +769,7 @@ function renderHeadlinesFeed(container, items) {
 }
 
 // ============================================
-// SUBSTACKS FEED (Daily Accumulation)
+// SUBSTACKS FEED
 // ============================================
 
 async function fetchSubstacksFeed() {
@@ -1093,21 +795,14 @@ async function fetchSubstacksFeed() {
         }
     }
 
-    // Merge with existing daily substacks (avoid duplicates)
     const existingIds = new Set(State.dailySubstacks.map(item => item.id));
     newItems.forEach(item => {
-        if (!existingIds.has(item.id)) {
-            State.dailySubstacks.push(item);
-        }
+        if (!existingIds.has(item.id)) State.dailySubstacks.push(item);
     });
 
-    // Sort by date (newest first)
     State.dailySubstacks.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Save to localStorage
     localStorage.setItem('daily-substacks', JSON.stringify(State.dailySubstacks));
 
-    // Render
     renderSubstacksFeed(container, State.dailySubstacks);
     State.feedsLoaded += feedsLoaded;
     updateFeedStatus();
@@ -1145,142 +840,73 @@ function renderSubstacksFeed(container, items) {
 }
 
 // ============================================
-// BREAKING NEWS (Scrolling Ticker)
+// MULTI-TIER ALERT BAR
 // ============================================
 
-async function fetchBreakingNews() {
+async function fetchAlertBar() {
     try {
-        // Fetch from multiple sources for variety
         const sources = [
             'https://feeds.npr.org/1001/rss.xml',
             'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml'
         ];
 
         let allItems = [];
-
         for (const url of sources) {
             try {
                 const xml = await fetchWithProxy(url);
                 const items = parseRSS(xml);
                 allItems = allItems.concat(items.slice(0, 5));
-            } catch (e) {
-                console.warn('Breaking news source failed:', url, e);
-            }
+            } catch (e) { /* skip */ }
         }
 
-        // Sort by date and take top 10
         allItems.sort((a, b) => b.date - a.date);
         const topItems = allItems.slice(0, 10);
 
         if (topItems.length > 0) {
-            renderBreakingTicker(topItems);
-            State.cache.breaking = { items: topItems, timestamp: Date.now() };
+            classifyAndRenderAlerts(topItems);
+            State.cache.alerts = { items: topItems, timestamp: Date.now() };
             saveCache();
         }
     } catch (e) {
-        console.warn('Breaking news failed:', e);
-        if (State.cache.breaking && State.cache.breaking.items) {
-            renderBreakingTicker(State.cache.breaking.items);
-        } else {
-            document.getElementById('breaking-headline').textContent = 'Breaking news unavailable';
+        if (State.cache.alerts?.items) {
+            classifyAndRenderAlerts(State.cache.alerts.items);
         }
     }
 }
 
-function renderBreakingTicker(items) {
-    const container = document.getElementById('breaking-headline');
+function classifyAndRenderAlerts(items) {
+    const bar = document.getElementById('alert-bar');
+    const badge = document.getElementById('alert-tier-badge');
+    const headline = document.getElementById('alert-headline');
 
-    // Create scrolling content with all headlines
+    // Classify tier based on keywords
+    let tier = 'routine';
+    for (const item of items) {
+        const upper = item.title.toUpperCase();
+        if (CONFIG.ALERT_KEYWORDS_FLASH.some(k => upper.includes(k))) {
+            tier = 'flash';
+            break;
+        }
+        if (CONFIG.ALERT_KEYWORDS_PRIORITY.some(k => upper.includes(k))) {
+            tier = 'priority';
+        }
+    }
+
+    // Apply tier styling
+    bar.className = `tier-${tier}`;
+    badge.textContent = tier.toUpperCase();
+
+    // Render scrolling ticker
     const tickerContent = items.map(item =>
         `<span class="ticker-headline"><a href="${item.link}" target="_blank">${item.title}</a></span>`
-    ).join('<span class="ticker-separator">•••</span>');
+    ).join('<span class="ticker-separator">\u2022\u2022\u2022</span>');
 
-    // Duplicate for seamless loop
-    container.innerHTML = `
+    headline.innerHTML = `
         <div class="ticker-scroll">
             <div class="ticker-content">${tickerContent}</div>
             <div class="ticker-content">${tickerContent}</div>
         </div>
     `;
-}
-
-// ============================================
-// FLAG STATUS (Half-Staff Check)
-// ============================================
-
-async function fetchFlagStatus() {
-    const statusEl = document.getElementById('flag-status')?.querySelector('.status-value');
-    if (!statusEl) return;
-
-    try {
-        // Fetch from halfstaff.org RSS feed for Illinois
-        const rssUrl = 'https://halfstaff.org/rss/illinois';
-        const xml = await fetchWithProxy(rssUrl);
-
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xml, 'text/xml');
-        const items = doc.querySelectorAll('item');
-
-        if (items.length > 0) {
-            const latestItem = items[0];
-            const title = latestItem.querySelector('title')?.textContent || '';
-            const pubDate = latestItem.querySelector('pubDate')?.textContent || '';
-
-            // Check if the half-staff order is currently active
-            const orderDate = new Date(pubDate);
-            const now = new Date();
-            const daysDiff = (now - orderDate) / (1000 * 60 * 60 * 24);
-
-            // Half-staff orders typically last a few days to a couple weeks
-            // Check if order is recent (within 30 days) - we'll show it as potentially active
-            if (daysDiff <= 30) {
-                // Extract reason from title (usually format: "Half-Staff for [Reason]")
-                let reason = title.replace(/half-?staff\s*(for|:)?\s*/i, '').trim();
-                if (reason.length > 30) {
-                    reason = reason.substring(0, 27) + '...';
-                }
-
-                statusEl.textContent = `HALF-STAFF`;
-                statusEl.className = 'status-value alert';
-                statusEl.title = title; // Full reason on hover
-
-                // Cache the result
-                State.cache.flagStatus = {
-                    halfStaff: true,
-                    reason: title,
-                    timestamp: Date.now()
-                };
-                saveCache();
-                return;
-            }
-        }
-
-        // No active half-staff order
-        statusEl.textContent = 'FULL-STAFF';
-        statusEl.className = 'status-value ok';
-        statusEl.title = 'Flag is at full-staff';
-
-        State.cache.flagStatus = { halfStaff: false, timestamp: Date.now() };
-        saveCache();
-
-    } catch (e) {
-        console.warn('Flag status fetch failed:', e);
-
-        // Try fallback: check cache
-        if (State.cache.flagStatus) {
-            if (State.cache.flagStatus.halfStaff) {
-                statusEl.textContent = 'HALF-STAFF';
-                statusEl.className = 'status-value alert';
-                statusEl.title = State.cache.flagStatus.reason || 'Half-staff order in effect';
-            } else {
-                statusEl.textContent = 'FULL-STAFF';
-                statusEl.className = 'status-value ok';
-            }
-        } else {
-            statusEl.textContent = 'UNKNOWN';
-            statusEl.className = 'status-value';
-        }
-    }
 }
 
 // ============================================
@@ -1296,8 +922,7 @@ async function fetchWeatherAlerts() {
         let weatherText = 'NO ALERTS';
 
         if (data.features && data.features.length > 0) {
-            const alert = data.features[0].properties;
-            weatherText = alert.event.toUpperCase();
+            weatherText = data.features[0].properties.event.toUpperCase();
             alertEl.textContent = weatherText;
             alertEl.className = 'status-value alert';
         } else {
@@ -1305,17 +930,15 @@ async function fetchWeatherAlerts() {
             alertEl.className = 'status-value ok';
         }
 
-        // Update Excel ribbon
         updateExcelStatus(null, weatherText);
-
-        State.cache.weather = { data: data, timestamp: Date.now() };
+        updateSensor('weather', 'ok', data.features?.length || 0);
+        State.cache.weather = { data, timestamp: Date.now() };
         saveCache();
     } catch (e) {
-        console.warn('Weather fetch failed:', e);
         const alertEl = document.getElementById('weather-alert').querySelector('.status-value');
         alertEl.textContent = 'UNAVAILABLE';
         alertEl.className = 'status-value';
-        updateExcelStatus(null, 'UNAVAILABLE');
+        updateSensor('weather', 'error', 'ERR');
     }
 }
 
@@ -1323,40 +946,24 @@ async function fetchWeatherAlerts() {
 // CONGRESS STATUS
 // ============================================
 
-async function fetchCongressStatus() {
+function fetchCongressStatus() {
     const statusEl = document.getElementById('congress-status').querySelector('.status-value');
+    const now = new Date();
+    const day = now.getDay();
+    const hour = now.getHours();
+    const isWeekday = day >= 1 && day <= 5;
+    const isBusinessHours = hour >= 9 && hour <= 18;
 
-    try {
-        // ProPublica Congress API or fallback to schedule-based logic
-        const now = new Date();
-        const day = now.getDay();
-        const hour = now.getHours();
-
-        // Simple heuristic: Congress typically in session Tue-Thu, sometimes Mon/Fri
-        // More accurate would require actual API access
-        const isWeekday = day >= 1 && day <= 5;
-        const isBusinessHours = hour >= 9 && hour <= 18;
-
-        let congressText;
-        // For demo purposes, use a simple rule
-        // In production, use ProPublica API: https://api.propublica.org/congress/v1/
-        if (isWeekday && isBusinessHours) {
-            congressText = 'IN SESSION';
-            statusEl.textContent = congressText;
-            statusEl.className = 'status-value session';
-        } else {
-            congressText = 'IN RECESS';
-            statusEl.textContent = congressText;
-            statusEl.className = 'status-value recess';
-        }
-
-        // Update Excel ribbon
-        updateExcelStatus(congressText, null);
-    } catch (e) {
-        statusEl.textContent = 'UNKNOWN';
-        statusEl.className = 'status-value';
-        updateExcelStatus('UNKNOWN', null);
+    let congressText;
+    if (isWeekday && isBusinessHours) {
+        congressText = 'IN SESSION';
+        statusEl.className = 'status-value session';
+    } else {
+        congressText = 'IN RECESS';
+        statusEl.className = 'status-value recess';
     }
+    statusEl.textContent = congressText;
+    updateExcelStatus(congressText, null);
 }
 
 // ============================================
@@ -1366,6 +973,7 @@ async function fetchCongressStatus() {
 async function fetchSportsData() {
     const container = document.getElementById('sports-ticker');
     container.innerHTML = '';
+    let sportsLoaded = 0;
 
     for (const [key, team] of Object.entries(CONFIG.SPORTS)) {
         try {
@@ -1373,7 +981,6 @@ async function fetchSportsData() {
             const response = await fetch(url);
             const data = await response.json();
 
-            // Find next upcoming game
             const now = new Date();
             let nextGame = null;
 
@@ -1388,157 +995,639 @@ async function fetchSportsData() {
             }
 
             if (nextGame) {
-                // Find opponent by comparing against team abbreviation
-                const opponent = nextGame.competitions?.[0]?.competitors?.find(c =>
-                    c.team.abbreviation.toUpperCase() !== team.abbrev.toUpperCase()
-                );
                 const gameDate = new Date(nextGame.date);
+                const opponent = nextGame.name || 'TBD';
+                const shortOpp = opponent.replace(team.name, '').replace(' at ', 'vs ').replace(' vs ', 'vs ').trim().split(' ').slice(0, 2).join(' ');
 
                 const item = document.createElement('span');
                 item.className = 'sport-item';
                 item.innerHTML = `
-                    <span class="sport-team">${team.name}</span>
-                    <span class="sport-opponent">vs ${opponent?.team?.abbreviation || 'TBD'}</span>
-                    <span class="sport-date">${gameDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span class="sport-team">${team.abbrev}</span>
+                    <span class="sport-opponent">${shortOpp}</span>
+                    <span class="sport-date">${formatRelativeTime(gameDate)}</span>
                 `;
                 container.appendChild(item);
+                sportsLoaded++;
             }
         } catch (e) {
-            console.warn(`Sports data for ${team.name} failed:`, e);
+            console.warn(`Sports ${team.name} failed:`, e);
         }
     }
 
-    if (container.children.length === 0) {
-        container.innerHTML = '<span class="text-muted">No upcoming games</span>';
+    updateSensor('sports', sportsLoaded > 0 ? 'ok' : 'warn', sportsLoaded);
+}
+
+// ============================================
+// SENSOR GRID
+// ============================================
+
+function updateSensor(name, status, value) {
+    State.sensorStatus[name] = { status, value };
+    const item = document.querySelector(`[data-sensor="${name}"]`);
+    if (!item) return;
+
+    const dot = item.querySelector('.sensor-dot');
+    const valueEl = item.querySelector('.sensor-value');
+
+    dot.className = `sensor-dot ${status}`;
+    if (value !== undefined) valueEl.textContent = value;
+}
+
+function updateSensorGrid() {
+    // Update feeds sensor with loaded count
+    const feedCount = State.feedsLoaded;
+    const feedStatus = State.errors === 0 ? 'ok' : State.errors < State.feedsTotal / 2 ? 'warn' : 'error';
+    updateSensor('feeds', feedStatus, `${feedCount}/${State.feedsTotal}`);
+}
+
+// ============================================
+// RISK GAUGES (Direct FRED API fallback)
+// ============================================
+
+async function fetchRiskGaugesDirect() {
+    // FRED API calls routed through CORS proxy
+    const FRED_KEY = '85bb3257d36338da2d0ad8aa14609f3b';
+    const series = {
+        vix: 'VIXCLS',
+        yield: 'T10Y2Y',
+        fedfunds: 'FEDFUNDS',
+        cpi: 'CPIAUCSL',
+        unemployment: 'UNRATE',
+        gscpi: 'GSCPI'
+    };
+
+    for (const [key, seriesId] of Object.entries(series)) {
+        try {
+            const fredUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=30`;
+            // Use CORS proxy since FRED doesn't allow browser CORS
+            let data = null;
+            for (const proxy of CONFIG.CORS_PROXIES) {
+                try {
+                    const response = await fetch(proxy + encodeURIComponent(fredUrl));
+                    if (response.ok) {
+                        data = await response.json();
+                        break;
+                    }
+                } catch (e) { continue; }
+            }
+            if (!data) throw new Error('All proxies failed');
+
+            if (data.observations && data.observations.length > 0) {
+                const values = data.observations
+                    .filter(o => o.value !== '.')
+                    .map(o => parseFloat(o.value))
+                    .reverse();
+
+                let latest = values[values.length - 1];
+
+                // CPI: compute YoY % change from raw index
+                if (key === 'cpi' && values.length >= 13) {
+                    const currentCPI = values[values.length - 1];
+                    const yearAgoCPI = values[values.length - 13]; // 12 months ago
+                    latest = ((currentCPI - yearAgoCPI) / yearAgoCPI) * 100;
+                } else if (key === 'cpi' && values.length >= 2) {
+                    // Fallback: approximate with available data
+                    const currentCPI = values[values.length - 1];
+                    const oldCPI = values[0];
+                    const months = values.length - 1;
+                    latest = ((currentCPI - oldCPI) / oldCPI) * 100 * (12 / months);
+                }
+
+                State.riskGauges[key] = { value: latest, history: key === 'cpi' ? values : values };
+                renderGauge(key, latest, values);
+            }
+        } catch (e) {
+            console.warn(`FRED ${key} failed:`, e);
+        }
+    }
+
+    updateSensor('fred', Object.keys(State.riskGauges).length > 0 ? 'ok' : 'error',
+        Object.keys(State.riskGauges).length);
+}
+
+async function fetchRiskGauges() {
+    try {
+        const response = await fetch(`${CONFIG.BACKEND_URL}/api/market/indicators`);
+        const data = await response.json();
+        if (data.indicators) {
+            Object.entries(data.indicators).forEach(([key, info]) => {
+                State.riskGauges[key] = info;
+                renderGauge(key, info.value, info.history);
+            });
+            updateSensor('fred', 'ok', Object.keys(data.indicators).length);
+        }
+    } catch (e) {
+        console.warn('Backend indicators failed, trying direct:', e);
+        fetchRiskGaugesDirect();
+    }
+}
+
+function renderGauge(key, value, history) {
+    const gauge = document.getElementById(`gauge-${key}`);
+    if (!gauge) return;
+
+    const valueEl = gauge.querySelector('.gauge-value');
+    const barFill = gauge.querySelector('.gauge-bar-fill');
+
+    // Format value
+    let displayValue = value.toFixed(2);
+    let barPercent = 0;
+    let barClass = 'low';
+    let valueClass = '';
+
+    switch (key) {
+        case 'vix':
+            displayValue = value.toFixed(1);
+            barPercent = Math.min((value / 40) * 100, 100);
+            if (value >= 30) { barClass = 'extreme'; valueClass = 'danger'; }
+            else if (value >= 25) { barClass = 'high'; valueClass = 'danger'; }
+            else if (value >= 20) { barClass = 'mid'; valueClass = 'elevated'; }
+            else { barClass = 'low'; valueClass = 'safe'; }
+            break;
+        case 'yield':
+            displayValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+            barPercent = Math.min(Math.abs(value) / 3 * 100, 100);
+            if (value < 0) { barClass = 'extreme'; valueClass = 'inverted'; }
+            else if (value < 0.5) { barClass = 'mid'; valueClass = 'elevated'; }
+            else { barClass = 'low'; valueClass = 'safe'; }
+            break;
+        case 'fedfunds':
+            displayValue = `${value.toFixed(2)}%`;
+            barPercent = Math.min((value / 8) * 100, 100);
+            barClass = value > 5 ? 'high' : value > 3 ? 'mid' : 'low';
+            break;
+        case 'cpi':
+            displayValue = `${value.toFixed(1)}%`;
+            barPercent = Math.min((value / 10) * 100, 100);
+            barClass = value > 5 ? 'extreme' : value > 3 ? 'mid' : 'low';
+            break;
+        case 'unemployment':
+            displayValue = `${value.toFixed(1)}%`;
+            barPercent = Math.min((value / 10) * 100, 100);
+            barClass = value > 6 ? 'high' : value > 5 ? 'mid' : 'low';
+            break;
+        case 'gscpi':
+            displayValue = value.toFixed(2);
+            barPercent = Math.min(Math.abs(value) / 4 * 100, 100);
+            barClass = value > 2 ? 'extreme' : value > 1 ? 'high' : value > 0 ? 'mid' : 'low';
+            break;
+    }
+
+    valueEl.textContent = displayValue;
+    if (valueClass) valueEl.className = `gauge-value ${valueClass}`;
+    barFill.style.width = `${barPercent}%`;
+    barFill.className = `gauge-bar-fill ${barClass}`;
+
+    // Render sparkline if history available
+    if (history && history.length > 1) {
+        renderGaugeSparkline(`gauge-${key}`, history);
     }
 }
 
 // ============================================
-// TWITTER EMBEDS
+// SWEEP DELTA (Local fallback)
 // ============================================
 
-function initTwitterTabs() {
-    const tabs = document.querySelectorAll('.twitter-tab');
-    const container = document.getElementById('twitter-container');
+function renderSweepDeltaLocal() {
+    const list = document.getElementById('sweep-delta-list');
+    const summary = document.getElementById('sweep-summary');
+    const directionEl = document.getElementById('delta-direction');
 
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
+    // Compare with last seen state
+    const lastState = JSON.parse(localStorage.getItem('last-dashboard-state') || '{}');
+    const changes = [];
 
-            const account = tab.dataset.account;
-            container.innerHTML = `
-                <div class="twitter-placeholder">
-                    <p>Loading @${account}...</p>
-                    <p><a href="https://twitter.com/${account}" target="_blank">View on X/Twitter →</a></p>
+    // Check headline count changes
+    const lastHeadlineCount = lastState.headlineCount || 0;
+    const newHeadlines = State.dailyHeadlines.length - lastHeadlineCount;
+    if (newHeadlines > 0) {
+        changes.push({ type: 'new', text: `${newHeadlines} new headlines`, category: 'news' });
+    }
+
+    // Check substack changes
+    const lastSubstackCount = lastState.substackCount || 0;
+    const newSubstacks = State.dailySubstacks.length - lastSubstackCount;
+    if (newSubstacks > 0) {
+        changes.push({ type: 'new', text: `${newSubstacks} new substack posts`, category: 'news' });
+    }
+
+    // Check market changes from cache
+    if (State.cache.stocks?.data && lastState.stockPrices) {
+        State.cache.stocks.data.forEach(quote => {
+            const lastPrice = lastState.stockPrices[quote.symbol];
+            if (lastPrice) {
+                const change = ((getQuotePrice(quote) - lastPrice) / lastPrice * 100);
+                if (Math.abs(change) > 2) {
+                    changes.push({
+                        type: change > 0 ? 'up' : 'down',
+                        text: `${quote.symbol} moved ${change > 0 ? '+' : ''}${change.toFixed(1)}%`,
+                        category: 'market',
+                        value: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`
+                    });
+                }
+            }
+        });
+    }
+
+    // Determine direction
+    const ups = changes.filter(c => c.type === 'up').length;
+    const downs = changes.filter(c => c.type === 'down').length;
+    let direction = 'mixed';
+    if (ups > downs) direction = 'risk-on';
+    else if (downs > ups) direction = 'risk-off';
+
+    directionEl.textContent = direction === 'risk-on' ? '\u2191 RISK-ON' : direction === 'risk-off' ? '\u2193 RISK-OFF' : '\u2194 MIXED';
+    directionEl.className = `delta-direction ${direction}`;
+
+    const lastSeenText = State.lastSeen ? formatRelativeTime(new Date(State.lastSeen)) + ' ago' : 'first visit';
+    summary.innerHTML = `<span class="sweep-summary-text">${changes.length} changes since ${lastSeenText}</span>`;
+
+    if (changes.length === 0) {
+        list.innerHTML = '<div class="loading-indicator" style="font-style: normal;">No significant changes detected</div>';
+    } else {
+        list.innerHTML = changes.map(c => {
+            const arrow = c.type === 'up' ? '\u25B2' : c.type === 'down' ? '\u25BC' : '\u25C6';
+            const arrowClass = c.type === 'up' ? 'up' : c.type === 'down' ? 'down' : 'new';
+            return `
+                <div class="delta-item">
+                    <span class="delta-arrow ${arrowClass}">${arrow}</span>
+                    <span class="delta-text">${c.text}</span>
+                    ${c.value ? `<span class="delta-value">${c.value}</span>` : ''}
                 </div>
             `;
+        }).join('');
+    }
 
-            // Load Twitter timeline widget
-            loadTwitterTimeline(account);
+    // Save current state for next comparison
+    const currentState = {
+        headlineCount: State.dailyHeadlines.length,
+        substackCount: State.dailySubstacks.length,
+        stockPrices: {},
+        timestamp: Date.now()
+    };
+    if (State.cache.stocks?.data) {
+        State.cache.stocks.data.forEach(q => {
+            currentState.stockPrices[q.symbol] = getQuotePrice(q);
         });
+    }
+    localStorage.setItem('last-dashboard-state', JSON.stringify(currentState));
+    State.lastSeen = new Date().toISOString();
+    localStorage.setItem('last-seen', State.lastSeen);
+}
+
+async function fetchSweepDelta() {
+    try {
+        const since = State.lastSeen || new Date(Date.now() - 6 * 3600000).toISOString();
+        const response = await fetch(`${CONFIG.BACKEND_URL}/api/sweep/delta?since=${since}`);
+        const data = await response.json();
+        // TODO: render backend delta
+    } catch (e) {
+        renderSweepDeltaLocal();
+    }
+}
+
+// ============================================
+// CROSS-SOURCE SIGNALS
+// ============================================
+
+function computeSignals() {
+    const signals = [];
+
+    // Market signals
+    if (State.riskGauges.vix?.value > 25) {
+        signals.push({ badge: 'market', text: `VIX elevated at ${State.riskGauges.vix.value.toFixed(1)} - market stress detected` });
+    }
+    if (State.riskGauges.yield?.value < 0) {
+        signals.push({ badge: 'market', text: `Yield curve inverted (${State.riskGauges.yield.value.toFixed(2)}%) - recession signal` });
+    }
+
+    // Weather signals
+    const weatherVal = document.getElementById('weather-alert')?.querySelector('.status-value');
+    if (weatherVal && weatherVal.classList.contains('alert')) {
+        signals.push({ badge: 'weather', text: `Chicago weather alert: ${weatherVal.textContent}` });
+    }
+
+    // News volume signal
+    if (State.dailyHeadlines.length > 100) {
+        signals.push({ badge: 'news', text: `High news volume: ${State.dailyHeadlines.length} headlines today` });
+    }
+
+    // Prediction signals
+    if (State.predictions?.upcoming?.length > 0) {
+        const soon = State.predictions.upcoming.filter(p => {
+            const days = (new Date(p.resolution_date) - new Date()) / (1000 * 60 * 60 * 24);
+            return days < 7;
+        });
+        if (soon.length > 0) {
+            signals.push({ badge: 'prediction', text: `${soon.length} prediction(s) resolving within 7 days` });
+        }
+    }
+
+    State.signals = signals;
+    renderSignals(signals);
+}
+
+function renderSignals(signals) {
+    const feed = document.getElementById('signals-feed');
+    const count = document.getElementById('signal-count');
+    count.textContent = signals.length;
+
+    if (signals.length === 0) {
+        feed.innerHTML = '<div class="loading-indicator" style="font-style: normal;">All systems nominal</div>';
+        return;
+    }
+
+    feed.innerHTML = signals.map(s => `
+        <div class="signal-item">
+            <span class="signal-badge ${s.badge}">${s.badge.toUpperCase()}</span>
+            <span class="signal-text">${s.text}</span>
+        </div>
+    `).join('');
+}
+
+// ============================================
+// PREDICTIONS (Direct Supabase fallback)
+// ============================================
+
+async function fetchPredictionsDirect() {
+    if (!CONFIG.PREDICTIONS_SUPABASE_URL || !CONFIG.PREDICTIONS_SUPABASE_KEY) {
+        updateSensor('predictions', 'warn', 'N/A');
+        renderPredictionsPlaceholder();
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `${CONFIG.PREDICTIONS_SUPABASE_URL}/rest/v1/predictions?select=*&order=resolution_date.asc`,
+            {
+                headers: {
+                    'apikey': CONFIG.PREDICTIONS_SUPABASE_KEY,
+                    'Authorization': `Bearer ${CONFIG.PREDICTIONS_SUPABASE_KEY}`
+                }
+            }
+        );
+        const predictions = await response.json();
+        processPredictions(predictions);
+    } catch (e) {
+        console.warn('Predictions fetch failed:', e);
+        updateSensor('predictions', 'error', 'ERR');
+        renderPredictionsPlaceholder();
+    }
+}
+
+async function fetchPredictions() {
+    try {
+        const response = await fetch(`${CONFIG.BACKEND_URL}/api/predictions/proxy`);
+        const data = await response.json();
+        processPredictions(data.predictions);
+    } catch (e) {
+        fetchPredictionsDirect();
+    }
+}
+
+function processPredictions(predictions) {
+    if (!predictions || !Array.isArray(predictions)) {
+        renderPredictionsPlaceholder();
+        return;
+    }
+
+    const now = new Date();
+    const open = predictions.filter(p => !p.resolved);
+    const resolved = predictions.filter(p => p.resolved);
+    const brierScores = resolved.filter(p => p.brier_score != null).map(p => p.brier_score);
+    const avgBrier = brierScores.length > 0 ? (brierScores.reduce((a, b) => a + b, 0) / brierScores.length) : null;
+
+    // Find next resolution date
+    const upcoming = open.sort((a, b) => new Date(a.resolution_date) - new Date(b.resolution_date));
+    const nextDue = upcoming.length > 0 ? new Date(upcoming[0].resolution_date) : null;
+
+    State.predictions = { open, resolved, avgBrier, upcoming };
+
+    document.getElementById('pred-open').textContent = open.length;
+    document.getElementById('pred-resolved').textContent = resolved.length;
+    document.getElementById('pred-brier').textContent = avgBrier != null ? avgBrier.toFixed(3) : 'N/A';
+    document.getElementById('pred-next').textContent = nextDue ? formatRelativeTime(nextDue) : 'N/A';
+
+    // Render upcoming predictions
+    const container = document.getElementById('predictions-upcoming');
+    container.innerHTML = upcoming.slice(0, 5).map(p => `
+        <div class="prediction-upcoming-item">
+            <span class="prediction-name">${p.name || p.title || 'Untitled'}</span>
+            <span class="prediction-prob">${p.probability}%</span>
+            <span class="prediction-due">${formatRelativeTime(new Date(p.resolution_date))}</span>
+        </div>
+    `).join('');
+
+    updateSensor('predictions', 'ok', open.length);
+}
+
+function renderPredictionsPlaceholder() {
+    document.getElementById('pred-open').textContent = '--';
+    document.getElementById('pred-resolved').textContent = '--';
+    document.getElementById('pred-brier').textContent = '--';
+    document.getElementById('pred-next').textContent = '--';
+    document.getElementById('predictions-upcoming').innerHTML =
+        '<div class="loading-indicator" style="font-style: normal; padding: 8px;">Connect prediction tracker to view</div>';
+}
+
+// ============================================
+// QUICK JOURNAL (localStorage fallback)
+// ============================================
+
+function initJournalInput() {
+    const input = document.getElementById('journal-input');
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            submitJournalEntry();
+        }
     });
 }
 
-function loadTwitterTimeline(account) {
-    const container = document.getElementById('twitter-container');
-    const height = window.innerHeight - 150; // Full viewport minus header elements
+function submitJournalEntry() {
+    const input = document.getElementById('journal-input');
+    const category = document.getElementById('journal-category').value;
+    const content = input.value.trim();
 
-    // Create Twitter timeline embed
-    container.innerHTML = `
-        <a class="twitter-timeline"
-           data-theme="${State.theme}"
-           data-chrome="noheader nofooter noborders transparent"
-           data-height="${height}"
-           href="https://twitter.com/${account}">
-            Loading @${account}...
-        </a>
-    `;
+    if (!content) return;
 
-    // Load Twitter widget script
-    if (window.twttr) {
-        window.twttr.widgets.load(container);
+    const entry = {
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        content,
+        category,
+        created_at: new Date().toISOString()
+    };
+
+    // Save to Supabase if configured, otherwise localStorage
+    if (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
+        saveJournalToSupabase(entry);
+    } else if (CONFIG.BACKEND_URL) {
+        saveJournalToBackend(entry);
     } else {
-        const script = document.createElement('script');
-        script.src = 'https://platform.twitter.com/widgets.js';
-        script.async = true;
-        document.body.appendChild(script);
+        saveJournalToLocalStorage(entry);
+    }
+
+    input.value = '';
+    showNotification('Idea saved!', 'success');
+}
+
+async function saveJournalToSupabase(entry) {
+    try {
+        const response = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/journal_entries`, {
+            method: 'POST',
+            headers: {
+                'apikey': CONFIG.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ content: entry.content, category: entry.category })
+        });
+        if (response.ok) {
+            fetchJournalFromSupabase();
+        } else {
+            saveJournalToLocalStorage(entry);
+        }
+    } catch (e) {
+        saveJournalToLocalStorage(entry);
     }
 }
 
-// ============================================
-// MAIN UPDATE LOOP
-// ============================================
+async function fetchJournalFromSupabase() {
+    try {
+        const response = await fetch(
+            `${CONFIG.SUPABASE_URL}/rest/v1/journal_entries?select=*&order=created_at.desc&limit=100`,
+            {
+                headers: {
+                    'apikey': CONFIG.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`
+                }
+            }
+        );
+        const entries = await response.json();
+        if (Array.isArray(entries)) {
+            State.journalEntries = entries;
+            renderJournalRecent(entries);
+            updateSensor('supabase', 'ok', entries.length);
+        }
+    } catch (e) {
+        loadJournalFromLocalStorage();
+    }
+}
 
-async function updateAll() {
-    console.log('Refreshing all data...');
+function saveJournalToLocalStorage(entry) {
+    const entries = JSON.parse(localStorage.getItem('journal-entries') || '[]');
+    entries.unshift(entry);
+    localStorage.setItem('journal-entries', JSON.stringify(entries));
+    State.journalEntries = entries;
+    renderJournalRecent(entries);
+}
 
-    State.feedsLoaded = 0;
-    State.feedsTotal = CONFIG.RSS_FEEDS.headlines.length +
-                       CONFIG.RSS_FEEDS.substacks.length + 7; // +2 reading, +1 breaking, +1 stocks, +1 rates, +1 flag, +1 weather
-    State.errors = 0;
+function loadJournalFromLocalStorage() {
+    const entries = JSON.parse(localStorage.getItem('journal-entries') || '[]');
+    State.journalEntries = entries;
+    renderJournalRecent(entries);
+    updateSensor('supabase', entries.length > 0 ? 'ok' : 'warn', entries.length);
+}
 
-    updateFeedStatus(0, State.feedsTotal);
+async function saveJournalToBackend(entry) {
+    try {
+        await fetch(`${CONFIG.BACKEND_URL}/api/journal/entries`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entry)
+        });
+        fetchJournalEntries();
+    } catch (e) {
+        saveJournalToLocalStorage(entry);
+    }
+}
 
-    // Parallel fetch
-    await Promise.allSettled([
-        fetchStockData(),
-        fetchFredRates(),
-        fetchReadingPanel(),
-        fetchHeadlinesFeed(),
-        fetchSubstacksFeed(),
-        fetchBreakingNews(),
-        fetchFlagStatus(),
-        fetchWeatherAlerts(),
-        fetchCongressStatus(),
-        fetchSportsData()
-    ]);
+async function fetchJournalEntries() {
+    try {
+        const response = await fetch(`${CONFIG.BACKEND_URL}/api/journal/entries`);
+        const data = await response.json();
+        State.journalEntries = data.entries || [];
+        renderJournalRecent(State.journalEntries);
+        updateSensor('supabase', 'ok', State.journalEntries.length);
+    } catch (e) {
+        loadJournalFromLocalStorage();
+    }
+}
 
-    // Update last updated time
-    State.lastUpdate = new Date();
-    document.getElementById('last-updated').textContent = `Updated: ${formatTime(State.lastUpdate)}`;
+function renderJournalRecent(entries) {
+    const container = document.getElementById('journal-recent');
+    const count = document.getElementById('journal-count');
+    count.textContent = entries.length;
 
-    // Update Excel ribbon time
-    updateExcelTime();
+    if (entries.length === 0) {
+        container.innerHTML = '<div class="loading-indicator" style="font-style: normal; padding: 8px;">No entries yet</div>';
+        return;
+    }
 
-    console.log('Refresh complete');
+    container.innerHTML = entries.slice(0, 8).map(e => `
+        <div class="journal-entry">
+            <div class="journal-entry-meta">
+                <span class="journal-entry-category ${e.category}">${e.category}</span>
+                <span>${formatRelativeTime(new Date(e.created_at))}</span>
+            </div>
+            <div class="journal-entry-text">${e.content}</div>
+        </div>
+    `).join('');
 }
 
 // ============================================
-// INITIALIZATION
+// SECONDARY OVERLAY NAVIGATION
 // ============================================
 
-async function init() {
-    console.log('News Dashboard initializing...');
+function initSecondaryNav() {
+    // Menu toggle
+    document.getElementById('menu-toggle').addEventListener('click', toggleSecondary);
 
-    // Check if it's a new day (reset accumulated items at midnight)
-    checkDailyReset();
+    // Tab switching
+    document.querySelectorAll('.secondary-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            if (!tab) return;
 
-    // Initialize theme
-    initTheme();
+            // Update active button
+            document.querySelectorAll('.secondary-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
 
-    // Start clock
-    updateClock();
-    setInterval(updateClock, 1000);
+            // Show correct tab
+            document.querySelectorAll('.secondary-tab').forEach(t => t.classList.add('hidden'));
+            const target = document.getElementById(`tab-${tab}`);
+            if (target) target.classList.remove('hidden');
+        });
+    });
 
-    // Theme toggle
-    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-
-    // Initialize Twitter tabs
-    initTwitterTabs();
-
-    // Initial data load
-    await updateAll();
-
-    // Set up auto-refresh
-    setInterval(updateAll, CONFIG.REFRESH_INTERVAL);
-
-    console.log('News Dashboard ready');
+    // Escape key to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && State.secondaryOpen) closeSecondary();
+    });
 }
 
-// Start when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
+function toggleSecondary() {
+    if (State.secondaryOpen) {
+        closeSecondary();
+    } else {
+        openSecondary();
+    }
 }
+
+function openSecondary() {
+    document.getElementById('secondary-overlay').classList.remove('hidden');
+    State.secondaryOpen = true;
+}
+
+function closeSecondary() {
+    document.getElementById('secondary-overlay').classList.add('hidden');
+    State.secondaryOpen = false;
+}
+
+// ============================================
+// INIT
+// ============================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    initBoot();
+});

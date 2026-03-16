@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Terminal</title>
+    <title>Duncan's Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,21 +11,31 @@
 </head>
 <body>
     <!-- ============================================ -->
+    <!-- BOOT SEQUENCE OVERLAY -->
+    <!-- ============================================ -->
+    <div id="boot-overlay" onclick="skipBoot()">
+        <div class="boot-container">
+            <div class="boot-ring"></div>
+            <div class="boot-title">DUNCAN'S DASHBOARD</div>
+            <div class="boot-subtitle">PERSONAL INTELLIGENCE TERMINAL</div>
+            <div class="boot-log" id="boot-log"></div>
+            <div class="boot-skip">click anywhere to skip</div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
     <!-- EXCEL THEME UI ELEMENTS (Hidden by default) -->
     <!-- ============================================ -->
-
-    <!-- Excel Title Bar -->
     <div class="excel-title-bar">
         <div class="excel-icon">X</div>
         <div class="excel-title">Dashboard.xlsx - Excel</div>
         <div class="excel-window-controls">
-            <span>—</span>
-            <span>☐</span>
-            <span>✕</span>
+            <span>&mdash;</span>
+            <span>&#9634;</span>
+            <span>&times;</span>
         </div>
     </div>
 
-    <!-- Excel Ribbon -->
     <div class="excel-ribbon">
         <div class="ribbon-tabs">
             <button class="ribbon-tab">File</button>
@@ -38,45 +48,28 @@
             <div class="ribbon-group">
                 <div class="ribbon-buttons">
                     <button class="ribbon-btn" onclick="updateAll()" title="Refresh all feeds">
-                        <span class="ribbon-btn-icon">🔄</span>
+                        <span class="ribbon-btn-icon">&#128260;</span>
                         <span>Refresh</span>
                     </button>
                     <button class="ribbon-btn" onclick="toggleTheme()" title="Switch theme">
-                        <span class="ribbon-btn-icon">◐</span>
+                        <span class="ribbon-btn-icon">&#9684;</span>
                         <span>Theme</span>
                     </button>
                 </div>
                 <div class="ribbon-group-label">Actions</div>
             </div>
             <div class="ribbon-group">
-                <div class="ribbon-buttons">
-                    <button class="ribbon-btn" onclick="document.getElementById('reading-panel').scrollIntoView()">
-                        <span class="ribbon-btn-icon">📚</span>
-                        <span>Reading</span>
-                    </button>
-                    <button class="ribbon-btn" onclick="document.getElementById('headlines-panel').scrollIntoView()">
-                        <span class="ribbon-btn-icon">📋</span>
-                        <span>Headlines</span>
-                    </button>
-                    <button class="ribbon-btn" onclick="document.getElementById('substacks-panel').scrollIntoView()">
-                        <span class="ribbon-btn-icon">📝</span>
-                        <span>Substacks</span>
-                    </button>
-                </div>
-                <div class="ribbon-group-label">Feeds</div>
-            </div>
-            <div class="ribbon-group">
                 <div class="ribbon-buttons" id="excel-stocks">
                     <div class="ribbon-btn stock-positive" id="excel-sp500">
-                        <span class="ribbon-btn-icon" style="color: #006600;">▲</span>
-                        <span>S&P ---</span>
+                        <span class="ribbon-btn-icon" style="color: #006600;">&#9650;</span>
+                        <span>S&amp;P ---</span>
                     </div>
                     <div class="ribbon-btn stock-positive" id="excel-dow">
-                        <span class="ribbon-btn-icon" style="color: #006600;">▲</span>
+                        <span class="ribbon-btn-icon" style="color: #006600;">&#9650;</span>
                         <span>DOW ---</span>
                     </div>
                     <div class="ribbon-btn stock-positive" id="excel-btc">
-                        <span class="ribbon-btn-icon" style="color: #006600;">▲</span>
+                        <span class="ribbon-btn-icon" style="color: #006600;">&#9650;</span>
                         <span>BTC ---</span>
                     </div>
                 </div>
@@ -85,11 +78,11 @@
             <div class="ribbon-group">
                 <div class="ribbon-buttons">
                     <div class="ribbon-btn" id="excel-congress">
-                        <span class="ribbon-btn-icon">🏛️</span>
+                        <span class="ribbon-btn-icon">&#127963;&#65039;</span>
                         <span style="color: #006600;">IN SESSION</span>
                     </div>
                     <div class="ribbon-btn" id="excel-weather">
-                        <span class="ribbon-btn-icon">🌤️</span>
+                        <span class="ribbon-btn-icon">&#127780;&#65039;</span>
                         <span>NO ALERTS</span>
                     </div>
                 </div>
@@ -107,7 +100,6 @@
         </div>
     </div>
 
-    <!-- Excel Formula Bar -->
     <div class="excel-formula-bar">
         <div class="formula-cell-ref">A1</div>
         <div class="formula-input">
@@ -116,12 +108,11 @@
         </div>
     </div>
 
-    <!-- Excel Sheet Tabs (at bottom, positioned via CSS grid) -->
     <div class="excel-sheet-tabs">
         <button class="sheet-tab active" data-panel="headlines">Headlines</button>
-        <button class="sheet-tab" data-panel="reading">Reading</button>
         <button class="sheet-tab" data-panel="substacks">Substacks</button>
-        <button class="sheet-tab" data-panel="twitter">Twitter</button>
+        <button class="sheet-tab" data-panel="gauges">Gauges</button>
+        <button class="sheet-tab" data-panel="delta">Delta</button>
         <button class="sheet-tab-add">+</button>
     </div>
 
@@ -132,55 +123,47 @@
         <div class="ticker-left">
             <div class="ticker-segment indices">
                 <span class="ticker-item" id="sp500">
-                    <span class="ticker-label">S&P</span>
+                    <span class="ticker-label">S&amp;P</span>
                     <span class="ticker-value">---</span>
                     <span class="ticker-change">--%</span>
+                    <svg class="sparkline" id="spark-sp500" width="40" height="14" viewBox="0 0 40 14"></svg>
                 </span>
                 <span class="ticker-item" id="nasdaq">
                     <span class="ticker-label">NASDAQ</span>
                     <span class="ticker-value">---</span>
                     <span class="ticker-change">--%</span>
+                    <svg class="sparkline" id="spark-nasdaq" width="40" height="14" viewBox="0 0 40 14"></svg>
                 </span>
                 <span class="ticker-item" id="dow">
                     <span class="ticker-label">DOW</span>
                     <span class="ticker-value">---</span>
                     <span class="ticker-change">--%</span>
+                    <svg class="sparkline" id="spark-dow" width="40" height="14" viewBox="0 0 40 14"></svg>
                 </span>
             </div>
-            <div class="ticker-divider">│</div>
+            <div class="ticker-divider">|</div>
+            <div class="ticker-segment stocks" id="stocks-ticker">
+                <!-- Populated by JS -->
+            </div>
+            <div class="ticker-divider">|</div>
             <div class="ticker-segment commodities">
                 <span class="ticker-item" id="btc">
                     <span class="ticker-label">BTC</span>
                     <span class="ticker-value">---</span>
                     <span class="ticker-change">--%</span>
+                    <svg class="sparkline" id="spark-btc" width="40" height="14" viewBox="0 0 40 14"></svg>
                 </span>
-                <span class="ticker-item" id="wti">
+                <span class="ticker-item" id="oil">
                     <span class="ticker-label">WTI</span>
                     <span class="ticker-value">---</span>
                     <span class="ticker-change">--%</span>
-                </span>
-            </div>
-            <div class="ticker-divider">│</div>
-            <div class="ticker-segment rates">
-                <span class="ticker-item" id="treasury10y">
-                    <span class="ticker-label">10Y</span>
-                    <span class="ticker-value">---</span>
-                    <span class="ticker-change">--%</span>
-                </span>
-                <span class="ticker-item" id="sofr">
-                    <span class="ticker-label">SOFR</span>
-                    <span class="ticker-value">---</span>
-                    <span class="ticker-change">--%</span>
+                    <svg class="sparkline" id="spark-oil" width="40" height="14" viewBox="0 0 40 14"></svg>
                 </span>
             </div>
         </div>
 
         <div class="ticker-right">
             <div class="ticker-segment status-items">
-                <span class="status-item" id="flag-status">
-                    <span class="status-label">FLAG:</span>
-                    <span class="status-value">LOADING...</span>
-                </span>
                 <span class="status-item" id="congress-status">
                     <span class="status-label">CONGRESS:</span>
                     <span class="status-value">LOADING...</span>
@@ -190,99 +173,336 @@
                     <span class="status-value">LOADING...</span>
                 </span>
             </div>
-            <div class="ticker-divider">│</div>
+            <div class="ticker-divider">|</div>
             <div class="ticker-segment sports" id="sports-ticker">
                 <!-- Populated by JS -->
             </div>
-            <div class="ticker-divider">│</div>
+            <div class="ticker-divider">|</div>
             <div class="header-controls">
                 <span id="last-updated">Updated: --:--</span>
-                <button id="theme-toggle" title="Toggle Light/Dark Mode">◐</button>
+                <button id="theme-toggle" title="Toggle Theme">&#9684;</button>
+                <button id="menu-toggle" title="More Panels">&#9776;</button>
                 <span id="clock">--:--:--</span>
             </div>
         </div>
     </header>
 
     <!-- ============================================ -->
-    <!-- BREAKING NEWS BAR -->
+    <!-- MULTI-TIER ALERT BAR -->
     <!-- ============================================ -->
-    <div id="breaking-bar">
-        <span class="breaking-label">▶ BREAKING</span>
-        <span id="breaking-headline">Loading top story...</span>
+    <div id="alert-bar">
+        <span class="alert-tier-badge" id="alert-tier-badge">ROUTINE</span>
+        <span id="alert-headline">Loading top story...</span>
     </div>
 
     <!-- ============================================ -->
-    <!-- MAIN CONTENT AREA -->
+    <!-- MAIN CONTENT AREA (3-column layout) -->
     <!-- ============================================ -->
     <main id="main-content">
-        <!-- PANEL 1: READING -->
-        <section class="panel" id="reading-panel">
-            <header class="panel-header">
-                <h2>READING</h2>
-                <span class="panel-source">INSTAPAPER • GOODREADS</span>
-            </header>
-            <div class="panel-content" id="reading-feed">
-                <div class="loading-indicator">Loading reading list...</div>
-            </div>
-        </section>
+        <!-- LEFT SIDEBAR: Sensor Grid + Risk Gauges + Predictions -->
+        <aside id="left-sidebar">
+            <!-- Sensor Grid -->
+            <section class="sidebar-section" id="sensor-grid-section">
+                <header class="sidebar-section-header">
+                    <h3>SENSOR GRID</h3>
+                </header>
+                <div class="sensor-grid" id="sensor-grid">
+                    <div class="sensor-item" data-sensor="markets">
+                        <span class="sensor-dot ok"></span>
+                        <span class="sensor-label">MARKETS</span>
+                        <span class="sensor-value" id="sensor-markets">--</span>
+                    </div>
+                    <div class="sensor-item" data-sensor="feeds">
+                        <span class="sensor-dot ok"></span>
+                        <span class="sensor-label">RSS FEEDS</span>
+                        <span class="sensor-value" id="sensor-feeds">--</span>
+                    </div>
+                    <div class="sensor-item" data-sensor="fred">
+                        <span class="sensor-dot pending"></span>
+                        <span class="sensor-label">FRED</span>
+                        <span class="sensor-value" id="sensor-fred">--</span>
+                    </div>
+                    <div class="sensor-item" data-sensor="energy">
+                        <span class="sensor-dot pending"></span>
+                        <span class="sensor-label">ENERGY</span>
+                        <span class="sensor-value" id="sensor-energy">--</span>
+                    </div>
+                    <div class="sensor-item" data-sensor="weather">
+                        <span class="sensor-dot pending"></span>
+                        <span class="sensor-label">WEATHER</span>
+                        <span class="sensor-value" id="sensor-weather">--</span>
+                    </div>
+                    <div class="sensor-item" data-sensor="sports">
+                        <span class="sensor-dot pending"></span>
+                        <span class="sensor-label">SPORTS</span>
+                        <span class="sensor-value" id="sensor-sports">--</span>
+                    </div>
+                    <div class="sensor-item" data-sensor="supabase">
+                        <span class="sensor-dot pending"></span>
+                        <span class="sensor-label">SUPABASE</span>
+                        <span class="sensor-value" id="sensor-supabase">--</span>
+                    </div>
+                    <div class="sensor-item" data-sensor="predictions">
+                        <span class="sensor-dot pending"></span>
+                        <span class="sensor-label">PREDICTIONS</span>
+                        <span class="sensor-value" id="sensor-predictions">--</span>
+                    </div>
+                </div>
+            </section>
 
-        <!-- PANEL 2: HEADLINES -->
-        <section class="panel" id="headlines-panel">
-            <header class="panel-header">
-                <h2>HEADLINES</h2>
-                <span class="panel-source">MULTI-SOURCE</span>
-            </header>
-            <div class="panel-content" id="headlines-feed">
-                <div class="loading-indicator">Loading headlines...</div>
-            </div>
-        </section>
+            <!-- Risk Gauges -->
+            <section class="sidebar-section" id="risk-gauges-section">
+                <header class="sidebar-section-header">
+                    <h3>RISK GAUGES</h3>
+                </header>
+                <div class="risk-gauges" id="risk-gauges">
+                    <div class="gauge-item" id="gauge-vix">
+                        <div class="gauge-header">
+                            <span class="gauge-label">VIX</span>
+                            <span class="gauge-value">--</span>
+                        </div>
+                        <div class="gauge-bar-track">
+                            <div class="gauge-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <svg class="gauge-sparkline" width="100%" height="20" preserveAspectRatio="none"></svg>
+                    </div>
+                    <div class="gauge-item" id="gauge-yield">
+                        <div class="gauge-header">
+                            <span class="gauge-label">10Y-2Y SPREAD</span>
+                            <span class="gauge-value">--</span>
+                        </div>
+                        <div class="gauge-bar-track">
+                            <div class="gauge-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <svg class="gauge-sparkline" width="100%" height="20" preserveAspectRatio="none"></svg>
+                    </div>
+                    <div class="gauge-item" id="gauge-fedfunds">
+                        <div class="gauge-header">
+                            <span class="gauge-label">FED FUNDS</span>
+                            <span class="gauge-value">--</span>
+                        </div>
+                        <div class="gauge-bar-track">
+                            <div class="gauge-bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="gauge-item" id="gauge-cpi">
+                        <div class="gauge-header">
+                            <span class="gauge-label">CPI (YoY)</span>
+                            <span class="gauge-value">--</span>
+                        </div>
+                        <div class="gauge-bar-track">
+                            <div class="gauge-bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="gauge-item" id="gauge-unemployment">
+                        <div class="gauge-header">
+                            <span class="gauge-label">UNEMPLOYMENT</span>
+                            <span class="gauge-value">--</span>
+                        </div>
+                        <div class="gauge-bar-track">
+                            <div class="gauge-bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="gauge-item" id="gauge-gscpi">
+                        <div class="gauge-header">
+                            <span class="gauge-label">SUPPLY CHAIN</span>
+                            <span class="gauge-value">--</span>
+                        </div>
+                        <div class="gauge-bar-track">
+                            <div class="gauge-bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-        <!-- PANEL 3: SUBSTACKS -->
-        <section class="panel" id="substacks-panel">
-            <header class="panel-header">
-                <h2>SUBSTACKS</h2>
-                <span class="panel-source">ANALYSIS</span>
-            </header>
-            <div class="panel-content" id="substacks-feed">
-                <div class="loading-indicator">Loading substacks...</div>
-            </div>
-        </section>
+            <!-- Prediction Command Center -->
+            <section class="sidebar-section" id="predictions-section">
+                <header class="sidebar-section-header">
+                    <h3>PREDICTIONS</h3>
+                </header>
+                <div class="predictions-center" id="predictions-center">
+                    <div class="prediction-stat">
+                        <span class="prediction-stat-label">OPEN</span>
+                        <span class="prediction-stat-value" id="pred-open">--</span>
+                    </div>
+                    <div class="prediction-stat">
+                        <span class="prediction-stat-label">RESOLVED</span>
+                        <span class="prediction-stat-value" id="pred-resolved">--</span>
+                    </div>
+                    <div class="prediction-stat">
+                        <span class="prediction-stat-label">BRIER SCORE</span>
+                        <span class="prediction-stat-value" id="pred-brier">--</span>
+                    </div>
+                    <div class="prediction-stat">
+                        <span class="prediction-stat-label">NEXT DUE</span>
+                        <span class="prediction-stat-value" id="pred-next">--</span>
+                    </div>
+                    <div class="predictions-upcoming" id="predictions-upcoming">
+                        <!-- Upcoming predictions rendered here -->
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        <!-- CENTER: Headlines + Substacks -->
+        <div id="center-content">
+            <section class="panel" id="headlines-panel">
+                <header class="panel-header">
+                    <h2>HEADLINES</h2>
+                    <span class="panel-source">MULTI-SOURCE</span>
+                </header>
+                <div class="panel-content" id="headlines-feed">
+                    <div class="loading-indicator">Loading headlines...</div>
+                </div>
+            </section>
+
+            <section class="panel" id="substacks-panel">
+                <header class="panel-header">
+                    <h2>SUBSTACKS</h2>
+                    <span class="panel-source">ANALYSIS</span>
+                </header>
+                <div class="panel-content" id="substacks-feed">
+                    <div class="loading-indicator">Loading substacks...</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- RIGHT SIDEBAR: Cross-Source Signals + Sweep Delta + Journal -->
+        <aside id="right-sidebar">
+            <!-- Cross-Source Signals -->
+            <section class="sidebar-section" id="signals-section">
+                <header class="sidebar-section-header">
+                    <h3>SIGNALS</h3>
+                    <span class="signal-count" id="signal-count">0</span>
+                </header>
+                <div class="signals-feed" id="signals-feed">
+                    <div class="loading-indicator">Computing signals...</div>
+                </div>
+            </section>
+
+            <!-- Sweep Delta -->
+            <section class="sidebar-section" id="sweep-delta-section">
+                <header class="sidebar-section-header">
+                    <h3>SWEEP DELTA</h3>
+                    <span class="delta-direction" id="delta-direction">--</span>
+                </header>
+                <div class="sweep-summary" id="sweep-summary">
+                    <span class="sweep-summary-text">Calculating changes...</span>
+                </div>
+                <div class="sweep-delta-list" id="sweep-delta-list">
+                    <div class="loading-indicator">Loading delta...</div>
+                </div>
+            </section>
+
+            <!-- Quick Journal -->
+            <section class="sidebar-section" id="journal-section">
+                <header class="sidebar-section-header">
+                    <h3>QUICK IDEAS</h3>
+                    <span class="journal-count" id="journal-count">0</span>
+                </header>
+                <div class="journal-input-area">
+                    <textarea id="journal-input" placeholder="Type an idea, observation, or note..." rows="2"></textarea>
+                    <div class="journal-controls">
+                        <select id="journal-category">
+                            <option value="idea">Idea</option>
+                            <option value="observation">Observation</option>
+                            <option value="decision">Decision</option>
+                            <option value="question">Question</option>
+                        </select>
+                        <button id="journal-submit" onclick="submitJournalEntry()">Save</button>
+                    </div>
+                </div>
+                <div class="journal-recent" id="journal-recent">
+                    <!-- Recent entries rendered here -->
+                </div>
+            </section>
+        </aside>
     </main>
 
     <!-- ============================================ -->
-    <!-- TWITTER/X SIDEBAR -->
+    <!-- SECONDARY OVERLAY (Menu panels) -->
     <!-- ============================================ -->
-    <aside id="twitter-sidebar">
-        <header class="panel-header">
-            <h2>X / TWITTER</h2>
-            <div class="twitter-tabs">
-                <button class="twitter-tab active" data-account="AP">@AP</button>
-                <button class="twitter-tab" data-account="Reuters">@Reuters</button>
-                <button class="twitter-tab" data-account="BNONews">@BNO</button>
-                <button class="twitter-tab" data-account="NWSChicago">@NWSChi</button>
-            </div>
-        </header>
-        <div class="twitter-embed-container" id="twitter-container">
-            <div class="twitter-placeholder">
-                <p>Twitter embeds require JavaScript widgets.</p>
-                <p>Visit: <a href="https://twitter.com/AP" target="_blank">@AP</a></p>
-            </div>
+    <div id="secondary-overlay" class="hidden">
+        <nav id="secondary-nav">
+            <button class="secondary-tab-btn active" data-tab="chicago">Chicago Pulse</button>
+            <button class="secondary-tab-btn" data-tab="sports">Sports Intel</button>
+            <button class="secondary-tab-btn" data-tab="journal-full">Decision Journal</button>
+            <button class="secondary-tab-btn" data-tab="brief">Daily Brief</button>
+            <button id="back-to-dash" onclick="closeSecondary()">&#x2190; Dashboard</button>
+        </nav>
+        <div id="secondary-content">
+            <section id="tab-chicago" class="secondary-tab">
+                <h2>CHICAGO PULSE</h2>
+                <div class="secondary-panel" id="cta-status">
+                    <h3>CTA TRAIN STATUS</h3>
+                    <div class="loading-indicator">Loading CTA data...</div>
+                </div>
+                <div class="secondary-panel" id="chi-weather-expanded">
+                    <h3>CHICAGO WEATHER</h3>
+                    <div class="loading-indicator">Loading forecast...</div>
+                </div>
+                <div class="secondary-panel" id="chi-events">
+                    <h3>LOCAL EVENTS</h3>
+                    <div class="loading-indicator">Loading events...</div>
+                </div>
+            </section>
+
+            <section id="tab-sports" class="secondary-tab hidden">
+                <h2>SPORTS INTEL</h2>
+                <div class="secondary-panel" id="sports-standings">
+                    <h3>STANDINGS</h3>
+                    <div class="loading-indicator">Loading standings...</div>
+                </div>
+                <div class="secondary-panel" id="sports-upcoming">
+                    <h3>UPCOMING GAMES</h3>
+                    <div class="loading-indicator">Loading schedule...</div>
+                </div>
+                <div class="secondary-panel" id="sports-injuries">
+                    <h3>INJURY REPORT</h3>
+                    <div class="loading-indicator">Loading injuries...</div>
+                </div>
+            </section>
+
+            <section id="tab-journal-full" class="secondary-tab hidden">
+                <h2>DECISION JOURNAL</h2>
+                <div class="journal-toolbar">
+                    <input type="text" id="journal-search" placeholder="Search entries...">
+                    <select id="journal-filter">
+                        <option value="all">All Categories</option>
+                        <option value="idea">Ideas</option>
+                        <option value="observation">Observations</option>
+                        <option value="decision">Decisions</option>
+                        <option value="question">Questions</option>
+                    </select>
+                </div>
+                <div class="journal-full-list" id="journal-full-list">
+                    <div class="loading-indicator">Loading journal...</div>
+                </div>
+            </section>
+
+            <section id="tab-brief" class="secondary-tab hidden">
+                <h2>DAILY BRIEF</h2>
+                <div class="brief-content" id="brief-content">
+                    <div class="loading-indicator">Generating brief...</div>
+                </div>
+            </section>
         </div>
-    </aside>
+    </div>
 
     <!-- ============================================ -->
     <!-- STATUS BAR (BOTTOM) -->
     <!-- ============================================ -->
     <footer id="status-bar">
         <span class="status-left">
-            <span id="connection-status" class="status-ok">● CONNECTED</span>
+            <span id="connection-status" class="status-ok">&#9679; CONNECTED</span>
             <span id="feed-status">Feeds: <span id="feeds-loaded">0</span>/<span id="feeds-total">0</span></span>
         </span>
         <span class="status-center">
-            DASHBOARD TERMINAL v1.0 | Data refreshes every 60s
+            DUNCAN'S DASHBOARD v2.0 | Data refreshes every 60s
         </span>
         <span class="status-right">
             <span id="errors-count">Errors: 0</span>
+            <span id="sweep-time">Last sweep: --:--</span>
         </span>
     </footer>
 

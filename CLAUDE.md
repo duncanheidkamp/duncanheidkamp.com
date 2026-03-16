@@ -45,6 +45,59 @@ You have full web access. Use it proactively to:
 
 ## Current Projects
 
+### Duncan's Dashboard (root — `dashboard.duncanheidkamp.com`)
+
+A Bloomberg Terminal / Crucix-inspired personal intelligence dashboard.
+
+**Live URL:** `https://dashboard.duncanheidkamp.com`
+
+**Tech Stack:**
+- Frontend: Vanilla HTML/CSS/JS with IBM Plex Mono (GitHub Pages)
+- Backend: Vercel serverless functions (planned)
+- Database: Supabase (journal, snapshots, state)
+- Data Sources: Yahoo Finance, FRED, EIA, ESPN, NWS, RSS feeds
+
+**Key Files:**
+| File | Purpose |
+|------|---------|
+| `index.html` | Main dashboard layout (3-column: left sidebar, center, right sidebar) |
+| `app.js` | All JavaScript logic, data fetching, rendering |
+| `style.css` | Full styling with 3 themes (dark, light, excel) |
+| `database-schema.sql` | Supabase tables for journal, snapshots, state |
+| `api/` | Vercel serverless backend (planned) |
+
+**Supabase (Dashboard):**
+- Project URL: `https://xymzjlzkitciequnggkz.supabase.co`
+- Tables: `journal_entries`, `dashboard_snapshots`, `user_state`, `alert_log`
+
+**API Keys (environment variables for Vercel):**
+- FRED_API_KEY: Federal Reserve economic data
+- EIA_API_KEY: Energy Information Administration
+- NASA_FIRMS_KEY: Fire/thermal detection (optional)
+
+**Layout:**
+- **Left sidebar (260px):** Sensor grid, Risk gauges (VIX, yield, CPI, etc.), Prediction command center
+- **Center (flex):** Headlines (2-col with Substacks)
+- **Right sidebar (300px):** Cross-source signals, Sweep delta, Quick journal
+- **Top:** Ticker bar with sparklines, Multi-tier alert bar (FLASH/PRIORITY/ROUTINE)
+- **Bottom:** Status bar with feed counts
+- **Secondary overlay (hamburger menu):** Chicago Pulse, Sports Intel, Decision Journal, Daily Brief
+
+**3 Themes:** Dark (default), Light, Excel (disguise mode with ribbon UI)
+
+**Features (v2.0):**
+- Boot sequence animation (per-session, skippable)
+- Risk gauges with FRED data (VIX, yield curve, fed funds, CPI, unemployment, GSCPI)
+- Sparkline charts on ticker items
+- Multi-tier alert system (FLASH/PRIORITY/ROUTINE based on keyword classification)
+- Sensor grid showing API health status
+- Sweep delta (what changed since last visit)
+- Cross-source signal correlation
+- Quick journal/idea capture (Supabase-backed)
+- Prediction command center (reads from existing prediction tracker)
+- Secondary tab system for deep-dive panels
+
+
 ### Prediction Tracker (`/prediction-tracker`)
 
 A public forecasting app that tracks predictions with Brier scoring.
