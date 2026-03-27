@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab — Duncan Heidkamp</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "SF Mono", "Menlo", "Monaco", monospace;
+    background: #0a0a0a; color: #e0e0e0;
+    max-width: 800px; margin: 0 auto; padding: 40px 20px;
+    font-size: 14px; line-height: 1.6;
+  }
+  a { color: #4a90d9; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  header { margin-bottom: 40px; }
+  header h1 { font-size: 20px; font-weight: 400; color: #fff; margin-bottom: 6px; }
+  header p { color: #666; font-size: 13px; }
+  .back { display: inline-block; margin-bottom: 20px; color: #555; font-size: 12px; }
+  .back:hover { color: #888; }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    border: 1px solid #1a1a1a; border-radius: 4px; padding: 20px;
+    transition: border-color 0.15s;
+  }
+  .card:hover { border-color: #333; }
+  .card h2 { font-size: 15px; font-weight: 400; color: #fff; margin-bottom: 8px; }
+  .card p { color: #888; font-size: 12px; margin-bottom: 10px; }
+  .card-date { color: #555; font-size: 11px; }
+  .card-link { font-size: 12px; }
+  .empty { color: #444; font-style: italic; padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+<a class="back" href="/">← duncanheidkamp.com</a>
+<header>
+  <h1>Lab</h1>
+  <p>One-shot builds — ideas I handed to Claude to build overnight.</p>
+</header>
+<div id="gallery" class="grid"></div>
+<script>
+const projects = [{"slug":"build-a-simple-countdown-timer-to-opening-day-2026","title":"build a simple countdown timer to Opening Day 2026 with Cubs styling","description":"A single-file (`index.html`) Cubs Opening Day 2026 countdown timer. - Live countdown: days / hours / minutes / seconds, ticking every second - Cubs color palette — blue `#0E3386`, red `#CC3433`, plu","built":"2026-03-27T15:53:59Z","lab_url":"/lab/build-a-simple-countdown-timer-to-opening-day-2026/","status":"published"}];
+const gallery = document.getElementById('gallery');
+if (projects.length === 0) {
+  gallery.innerHTML = '<p class="empty">No projects yet. Ideas are brewing.</p>';
+} else {
+  gallery.innerHTML = projects.map(p => {
+    const date = new Date(p.built).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric'
+    });
+    return `<div class="card">
+      <h2>${esc(p.title)}</h2>
+      <p>${esc(p.description)}</p>
+      <span class="card-date">${date}</span>
+      <br><a class="card-link" href="${p.lab_url}">View →</a>
+    </div>`;
+  }).join('');
+}
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
