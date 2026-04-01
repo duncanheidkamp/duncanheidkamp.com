@@ -43,7 +43,14 @@
 </header>
 <div id="gallery" class="grid"></div>
 <script>
-const projects = [];
+const projects = [
+  {
+    title: "Sixteen WINdiana",
+    description: "A retro VCR archive of all 16 games from the greatest season of college football, ever. Dark broadcast aesthetic, team logo splash screens, CRT scanline toggle.",
+    built: "2026-04-01",
+    lab_url: "https://sixteenwindiana.com"
+  }
+];
 const gallery = document.getElementById('gallery');
 if (projects.length === 0) {
   gallery.innerHTML = '<p class="empty">No projects yet. Ideas are brewing.</p>';
